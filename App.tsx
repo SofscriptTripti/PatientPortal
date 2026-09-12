@@ -14,8 +14,8 @@ import { UserSession } from './components/types';
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [userSession, setUserSession] = useState<UserSession>({
-    mobileNumber: '9819863084',
-    name: 'CHOUGULE MINAL SACHIN',
+    mobileNumber: '73737377373',
+    name: 'Deepak Chouhan',
     isLoggedIn: false,
   });
 
@@ -63,7 +63,7 @@ function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F6FA',
+    backgroundColor: '#F8FAFE',
   },
 });
 

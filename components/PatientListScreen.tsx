@@ -4,17 +4,18 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
   Image,
   Modal,
   TextInput,
   Alert,
-  Dimensions,
+  ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
 import { PatientMember, UserSession } from './types';
 import { INITIAL_PATIENTS } from './mockData';
+import UniversalLoader from './UniversalLoader';
 
 interface PatientListScreenProps {
   userSession: UserSession;
@@ -22,11 +23,28 @@ interface PatientListScreenProps {
   onChangePin: () => void;
 }
 
-// Avatar mapping: Female -> avatar_female.png, Male -> avatar_male.png
-const getAvatarSource = (genderType: 'M' | 'F') => {
-  return genderType === 'F'
-    ? require('../assets/images/avatar_female.png')
-    : require('../assets/images/avatar_male.png');
+// Avatar mapping: Exact cartoon avatars matching reference mockup
+const getAvatarSource = (patient: PatientMember) => {
+  if (patient.id === '1' || patient.name.toLowerCase().includes('deepak')) {
+    return require('../assets/images/avatar_deepak.png');
+  }
+  if (patient.id === '2' || patient.name.toLowerCase().includes('kavita')) {
+    return require('../assets/images/avatar_kavita.png');
+  }
+  if (patient.id === '3' || patient.name.toLowerCase().includes('aarav')) {
+    return require('../assets/images/avatar_aarav.png');
+  }
+  return patient.genderType === 'F'
+    ? require('../assets/images/avatar_kavita.png')
+    : require('../assets/images/avatar_deepak.png');
+};
+
+// Pastel circle background for each avatar
+const getAvatarBg = (patient: PatientMember) => {
+  if (patient.genderType === 'F' || patient.relation.toLowerCase() === 'wife') {
+    return '#FDE1E7'; // Pastel pink
+  }
+  return '#DEF0FD'; // Pastel icy blue
 };
 
 export const PatientListScreen: React.FC<PatientListScreenProps> = ({
@@ -35,57 +53,77 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
   onChangePin,
 }) => {
   const insets = useSafeAreaInsets();
-  const [patients, setPatients] = useState<PatientMember[]>(INITIAL_PATIENTS);
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 600;
+
+  // Exactly 3 family members
+  const [patients, setPatients] = useState<PatientMember[]>(INITIAL_PATIENTS.slice(0, 3));
+  const [activeTab, setActiveTab] = useState<'Home' | 'Visits' | 'Reports' | 'Care' | 'Profile'>('Home');
+
+  // Universal Loader state
+  const [loaderState, setLoaderState] = useState<{
+    visible: boolean;
+    message?: string;
+    subtitle?: string;
+  }>({ visible: false });
 
   // Modals state
   const [selectedPatient, setSelectedPatient] = useState<PatientMember | null>(null);
   const [showContactModal, setShowContactModal] = useState(false);
-  const [showAddExistingModal, setShowAddExistingModal] = useState(false);
-  const [showNewMemberModal, setShowNewMemberModal] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  // Add Existing Form
-  const [existPatientNo, setExistPatientNo] = useState('');
-  const [existMobile, setExistMobile] = useState('');
-  const [existRelation, setExistRelation] = useState('Relative');
-  const [existGender, setExistGender] = useState<'M' | 'F'>('M');
-
-  // New Member Form
+  // Add Member Form
   const [newName, setNewName] = useState('');
-  const [newRelation, setNewRelation] = useState('Child');
+  const [newRelation, setNewRelation] = useState('Son');
   const [newSex, setNewSex] = useState<'M' | 'F'>('M');
   const [newAge, setNewAge] = useState('');
-  const [newMarital] = useState('Single');
-  const [newMobile, setNewMobile] = useState(userSession.mobileNumber || '9819863084');
+  const [newMobile, setNewMobile] = useState(userSession.mobileNumber || '73737377376');
+  const [newPatientNo, setNewPatientNo] = useState('');
 
-  // Add Existing Member Handler
-  const handleAddExisting = () => {
-    if (!existPatientNo.trim() && !existMobile.trim()) {
-      Alert.alert('Details Required', 'Please enter either Patient Number (UHID) or Mobile Number.');
-      return;
-    }
-
-    const newMember: PatientMember = {
-      id: Date.now().toString(),
-      name: `MEMBER ${existPatientNo || 'ACCOUNT'}`,
-      relation: existRelation,
-      sex: existGender,
-      age: '28yrs',
-      maritalStatus: 'Married',
-      registrationStatus: 'Registered',
-      mobileNumber: existMobile.trim() || userSession.mobileNumber || '9819863084',
-      patientNumber: existPatientNo.trim() || Math.floor(1000000 + Math.random() * 9000000).toString(),
-      genderType: existGender,
-    };
-
-    setPatients((prev) => [newMember, ...prev]);
-    setShowAddExistingModal(false);
-    setExistPatientNo('');
-    setExistMobile('');
-    Alert.alert('Success', 'Existing family member account linked successfully!');
+  // Quick Action Handler: Book Visit
+  const handleQuickBookVisit = () => {
+    setLoaderState({
+      visible: true,
+      message: 'Loading Doctor Visit Schedules...',
+      subtitle: 'Connecting to hospital appointment desk',
+    });
+    setTimeout(() => {
+      setLoaderState({ visible: false });
+      Alert.alert(
+        'Book Visit',
+        'Please select a family member below or choose your doctor to schedule an OPD consultation.'
+      );
+    }, 600);
   };
 
-  // Add New Member Handler
+  // Quick Action Handler: Pay Bills (Entypo wallet)
+  const handleQuickPayBills = () => {
+    setLoaderState({
+      visible: true,
+      message: 'Fetching Hospital Invoices...',
+      subtitle: 'Accessing secure medical billing portal',
+    });
+    setTimeout(() => {
+      setLoaderState({ visible: false });
+      Alert.alert('Pay Bills', 'All hospital bills and pharmacy invoices are settled. No pending balance.');
+    }, 600);
+  };
+
+  // Quick Action Handler: Diet (MaterialCommunityIcons food-apple)
+  const handleQuickDiet = () => {
+    setLoaderState({
+      visible: true,
+      message: 'Opening Clinical Nutrition...',
+      subtitle: 'Loading personalized doctor diet recommendations',
+    });
+    setTimeout(() => {
+      setLoaderState({ visible: false });
+      Alert.alert('Diet & Nutrition', 'Personalized recovery diet plans and calorie tracking are up-to-date.');
+    }, 600);
+  };
+
+  // Add New Member Handler (Ionicons person-add)
   const handleAddNewMember = () => {
     if (!newName.trim()) {
       Alert.alert('Name Required', 'Please enter member full name.');
@@ -96,224 +134,572 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
       return;
     }
 
-    const ageNum = parseInt(newAge, 10);
-    const newMember: PatientMember = {
-      id: Date.now().toString(),
-      name: newName.trim().toUpperCase(),
-      relation: newRelation,
-      sex: newSex,
-      age: `${newAge.trim()}yrs`,
-      maritalStatus: ageNum < 18 ? '' : newMarital,
-      registrationStatus: 'Registered',
-      mobileNumber: newMobile.trim() || '9819863084',
-      patientNumber: Math.floor(1000000 + Math.random() * 9000000).toString(),
-      genderType: newSex,
-    };
+    setLoaderState({
+      visible: true,
+      message: 'Adding Family Member...',
+      subtitle: 'Linking hospital health record',
+    });
 
-    setPatients((prev) => [newMember, ...prev]);
-    setShowNewMemberModal(false);
-    setNewName('');
-    setNewAge('');
-    Alert.alert('Success', `${newName.trim()} has been registered and added to your family.`);
+    setTimeout(() => {
+      setLoaderState({ visible: false });
+      const newMember: PatientMember = {
+        id: Date.now().toString(),
+        name: newName.trim(),
+        relation: newRelation,
+        sex: newSex,
+        age: `${newAge.trim()} Y`,
+        maritalStatus: '',
+        registrationStatus: 'Registered',
+        mobileNumber: newMobile.trim() || '73737377376',
+        patientNumber: newPatientNo.trim() || Math.floor(100000000 + Math.random() * 900000000).toString(),
+        genderType: newSex,
+      };
+
+      setPatients((prev) => [...prev, newMember]);
+      setShowAddMemberModal(false);
+      setNewName('');
+      setNewAge('');
+      setNewPatientNo('');
+      Alert.alert('Success', `${newName.trim()} added to your family members.`);
+    }, 600);
   };
 
-  // Remove/Unlink Member Handler
+  // Remove / Unlink Member Handler
   const handleRemoveMember = (patientId: string) => {
     Alert.alert(
-      'Unlink Member',
-      'Are you sure you want to remove this member from your linked family accounts?',
+      'Remove Member',
+      'Are you sure you want to remove this family member?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Unlink',
+          text: 'Remove',
           style: 'destructive',
           onPress: () => {
-            setPatients((prev) => prev.filter((p) => p.id !== patientId));
-            setSelectedPatient(null);
-            Alert.alert('Unlinked', 'Member unlinked from family list.');
+            setLoaderState({
+              visible: true,
+              message: 'Removing Member...',
+              subtitle: 'Updating family portal records',
+            });
+            setTimeout(() => {
+              setLoaderState({ visible: false });
+              setPatients((prev) => prev.filter((p) => p.id !== patientId));
+              setSelectedPatient(null);
+            }, 500);
           },
         },
       ]
     );
   };
 
-  // Render individual Patient Card inside the curved parent container
-  const renderPatientCard = ({ item }: { item: PatientMember }) => {
-    return (
-      <View style={styles.cardContainer}>
-        {/* Left Column: Avatar + Green "Registered" Badge */}
-        <View style={styles.leftColumn}>
-          <View style={styles.avatarCircle}>
-            <Image
-              source={getAvatarSource(item.genderType)}
-              style={styles.avatarImage}
-              resizeMode="contain"
-            />
-          </View>
+  // Appointment for selected patient
+  const handleBookAppointmentForPatient = (patient: PatientMember) => {
+    setSelectedPatient(null);
+    setLoaderState({
+      visible: true,
+      message: 'Loading Doctor Schedule...',
+      subtitle: `Fetching available time slots for ${patient.name}`,
+    });
+    setTimeout(() => {
+      setLoaderState({ visible: false });
+      Alert.alert('Book Visit', `Ready to book an appointment for ${patient.name} (Patient No: ${patient.patientNumber}).`);
+    }, 600);
+  };
 
-          <View style={styles.registeredBadge}>
-            <AppIcon name="check" size={12} color="#16A34A" />
-            <Text style={styles.registeredBadgeText}>Registered</Text>
-          </View>
+  // Reports for selected patient
+  const handleViewReportsForPatient = (patient: PatientMember) => {
+    setSelectedPatient(null);
+    setLoaderState({
+      visible: true,
+      message: 'Fetching Diagnostic Reports...',
+      subtitle: `Retrieving lab & radiology reports for ${patient.name}`,
+    });
+    setTimeout(() => {
+      setLoaderState({ visible: false });
+      Alert.alert('Medical Reports', `Viewing reports and digital prescriptions for ${patient.name}.`);
+    }, 600);
+  };
+
+  // Render individual Patient Card with adjusted width and professional styling
+  const renderPatientCard = ({ item }: { item: PatientMember }) => {
+    const avatarBg = getAvatarBg(item);
+
+    return (
+      <TouchableOpacity
+        style={styles.patientCard}
+        onPress={() => setSelectedPatient(item)}
+        activeOpacity={0.88}
+      >
+        {/* Left: Avatar with pastel colored circular background */}
+        <View style={[styles.avatarCircle, { backgroundColor: avatarBg }]}>
+          <Image
+            source={getAvatarSource(item)}
+            style={styles.avatarImage}
+            resizeMode="cover"
+          />
         </View>
 
-        {/* Right Column: Name + 4 Detail Rows */}
-        <View style={styles.rightColumn}>
-          {/* Top Row: Name and Three Dots */}
-          <View style={styles.nameHeaderRow}>
-            <Text style={styles.patientName} numberOfLines={1}>
-              {item.name}
-            </Text>
-            <TouchableOpacity
-              style={styles.dotsButton}
-              onPress={() => setSelectedPatient(item)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <AppIcon name="dots-horizontal" size={24} color="#1E293B" />
-            </TouchableOpacity>
+        {/* Right: Info Section */}
+        <View style={styles.cardRightContent}>
+          {/* Top Row: Name + Relation Pill + Chevron Arrow */}
+          <View style={styles.cardTopRow}>
+            <View style={styles.nameAndTagGroup}>
+              <Text style={styles.cardPatientName} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {/* Relation with Green app theme bg and White text in ALL CAPS */}
+              <View style={styles.relationTag}>
+                <Text style={styles.relationTagText}>
+                  {item.relation.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+
+            {/* Circular Right Chevron Button */}
+            <View style={styles.chevronCircle}>
+              <AppIcon name="chevron-right" size={15} color="#008494" />
+            </View>
           </View>
 
-          {/* 4 Detail Rows matching the reference screenshot */}
-          <View style={styles.detailsGrid}>
-            {/* Row 1: Sex, Age, Marital Status */}
-            <View style={styles.detailRow}>
-              <View style={styles.iconCell}>
-                <AppIcon name="user" size={16} color="#1D61E7" />
-              </View>
-              <Text style={styles.detailLabel}>Sex, Age, Marital Status</Text>
-              <Text style={styles.detailValue}>
-                {item.sex}, {item.age}{item.maritalStatus ? `, ${item.maritalStatus}` : ','}
+          {/* Bottom Row: 3 Columns with thin vertical dividers */}
+          <View style={styles.threeColumnGrid}>
+            {/* Col 1: Gender / Age */}
+            <View style={styles.infoCol}>
+              <Text style={styles.infoColLabel}>Gender / Age</Text>
+              <Text style={styles.infoColValue} numberOfLines={1}>
+                {item.sex === 'M' ? 'Male' : 'Female'} / {item.age}
               </Text>
             </View>
 
-            {/* Row 2: Registration Status */}
-            <View style={styles.detailRow}>
-              <View style={styles.iconCell}>
-                <AppIcon name="shield-check" size={16} color="#1D61E7" />
-              </View>
-              <Text style={styles.detailLabel}>Registration Status</Text>
-              <Text style={[styles.detailValue, styles.statusRegisteredText]}>
-                {item.registrationStatus}
-              </Text>
-            </View>
+            <View style={styles.colDivider} />
 
-            {/* Row 3: Mobile Number */}
-            <View style={styles.detailRow}>
-              <View style={styles.iconCell}>
-                <AppIcon name="phone" size={16} color="#1D61E7" />
-              </View>
-              <Text style={styles.detailLabel}>Mobile Number</Text>
-              <Text style={[styles.detailValue, styles.mobileNumberText]}>
-                {item.mobileNumber}
-              </Text>
-            </View>
-
-            {/* Row 4: Patient Number */}
-            <View style={styles.detailRow}>
-              <View style={styles.iconCell}>
-                <AppIcon name="patient-id" size={16} color="#1D61E7" />
-              </View>
-              <Text style={styles.detailLabel}>Patient Number</Text>
-              <Text style={[styles.detailValue, styles.patientNumberText]}>
+            {/* Col 2: Patient No */}
+            <View style={styles.infoCol}>
+              <Text style={styles.infoColLabel}>Patient No</Text>
+              <Text style={styles.infoColValue} numberOfLines={1}>
                 {item.patientNumber}
               </Text>
             </View>
+
+            <View style={styles.colDivider} />
+
+            {/* Col 3: Mobile No */}
+            <View style={styles.infoCol}>
+              <Text style={styles.infoColLabel}>Mobile No</Text>
+              <Text style={styles.infoColValue} numberOfLines={1}>
+                {item.mobileNumber}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
+  // User initial for top avatar
+  const userInitial = (userSession.name && userSession.name.trim().charAt(0).toUpperCase()) || 'D';
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-      {/* 1. TOP HEADER SECTION WITH LARGER HEIGHT & CENTERED SPACING */}
-      <View style={styles.headerContainer}>
-        {/* Top bar with Contact Us button */}
-        <View style={styles.headerTopBar}>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity
-            style={styles.contactUsBtn}
-            onPress={() => setShowContactModal(true)}
-            activeOpacity={0.85}
-          >
-            <AppIcon name="phone" size={15} color="#1D61E7" />
-            <Text style={styles.contactUsText}>Contact Us</Text>
-          </TouchableOpacity>
-
-         
-        </View>
-
-        {/* Header Content Row: Big Title (Single Line) + Big 3D Family Artwork */}
-        <View style={styles.headerContentRow}>
-          {/* Left Title: Single Line "Your Family Members" */}
-          <View style={styles.headerTitlesCol}>
-            <Text style={styles.titleSingleLine}>
-              Your Family <Text style={styles.titleBlue}>Members</Text>
+      <View style={styles.mainContainer}>
+        {/* 1. PROPER HEADER: White background, subtle bottom border & shadow */}
+        <View style={styles.headerBar}>
+          <View style={styles.headerLeftGroup}>
+            <Text style={styles.headerTitle}>
+              <Text style={styles.headerTitleNavy}>Patient </Text>
+              <Text style={styles.headerTitleTeal}>Portal</Text>
             </Text>
-            <Text style={styles.headerSubtitle}>
-              Manage and view linked{'\n'}family accounts
-            </Text>
+            <Text style={styles.headerSubtitle}>Care Today. Healthier Tomorrow.</Text>
           </View>
 
-          {/* Right Big 3D Family Photo */}
-          <View style={styles.bannerArtContainer}>
-            <Image
-              source={require('../assets/images/family_banner.png')}
-              style={styles.headerBannerArt}
-              resizeMode="contain"
-            />
+          <View style={styles.headerRightGroup}>
+            {/* Notification Bell with Red Badge Dot */}
+            <TouchableOpacity
+              style={styles.bellButton}
+              onPress={() => setShowContactModal(true)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <AppIcon name="bell" size={22} color="#0284C7" />
+              <View style={styles.bellBadgeDot} />
+            </TouchableOpacity>
+
+            {/* Profile Avatar Circle with User Initial */}
+            <TouchableOpacity
+              style={styles.profileInitialCircle}
+              onPress={() => setShowProfileMenu(true)}
+              activeOpacity={0.8}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.profileInitialText}>{userInitial}</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </View>
 
-      {/* 2. PARENT SECTION WITH CURVED TOP BORDER ENCLOSING PATIENT LIST */}
-      <View style={styles.curvedParentSection}>
-        {/* SCROLLABLE PATIENTS LIST INSIDE CURVED PARENT */}
-        <FlatList
-          data={patients}
-          renderItem={renderPatientCard}
-          keyExtractor={(item) => item.id}
+        <ScrollView
           contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: insets.bottom + 145 },
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 90 },
+            isTablet && { maxWidth: 640, alignSelf: 'center', width: '100%' },
           ]}
           showsVerticalScrollIndicator={false}
-        />
-      </View>
+        >
+          {/* 2. 4 FEATURE ICONS ROW: No borders around or between, distributed equally */}
+          <View style={styles.featureRowContainer}>
+            {/* 1. Book Visit */}
+            <TouchableOpacity
+              style={styles.featureCol}
+              onPress={handleQuickBookVisit}
+              activeOpacity={0.7}
+            >
+              <View style={styles.featureIconWrapper}>
+                <AppIcon name="calendar" size={28} color="#00A896" />
+              </View>
+              <Text style={styles.featureLabel}>Book Visit</Text>
+            </TouchableOpacity>
 
-      {/* 3. STICKY BOTTOM ACTION BAR WITH PURPLE "ADD EXISTING MEMBER" BUTTON */}
-      <View
-        style={[
-          styles.stickyBottomContainer,
-          { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 16 },
-        ]}
-      >
-        <View style={styles.buttonsRow}>
-          {/* Add Existing Member Button (Purple styling matching reference image) */}
+            {/* 2. Pay Bills: wallet from Entypo */}
+            <TouchableOpacity
+              style={styles.featureCol}
+              onPress={handleQuickPayBills}
+              activeOpacity={0.7}
+            >
+              <View style={styles.featureIconWrapper}>
+                <AppIcon name="wallet" size={27} color="#00A896" />
+              </View>
+              <Text style={styles.featureLabel}>Pay Bills</Text>
+            </TouchableOpacity>
+
+            {/* 3. Diet: food-apple from MaterialCommunityIcons */}
+            <TouchableOpacity
+              style={styles.featureCol}
+              onPress={handleQuickDiet}
+              activeOpacity={0.7}
+            >
+              <View style={styles.featureIconWrapper}>
+                <AppIcon name="food-apple" size={28} color="#00A896" />
+              </View>
+              <Text style={styles.featureLabel}>Diet</Text>
+            </TouchableOpacity>
+
+            {/* 4. Add Member: person-add from Ionicons */}
+            <TouchableOpacity
+              style={styles.featureCol}
+              onPress={() => setShowAddMemberModal(true)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.featureIconWrapper}>
+                <AppIcon name="person-add" size={28} color="#00A896" />
+              </View>
+              <Text style={styles.featureLabel}>Add Member</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 3. SECTION TITLE ROW: "Your Family Members (3)" without Add Member icon */}
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitleText}>
+              Your Family Members ({patients.length})
+            </Text>
+          </View>
+
+          {/* 4. LIST OF EXACTLY 3 FAMILY PATIENT CARDS */}
+          {patients.slice(0, 3).map((item) => (
+            <View key={item.id}>{renderPatientCard({ item })}</View>
+          ))}
+        </ScrollView>
+
+        {/* 5. FIXED FLOATING BOTTOM NAVIGATION BAR */}
+        <View
+          style={[
+            styles.bottomNavBar,
+            { paddingBottom: Math.max(insets.bottom, 10) },
+          ]}
+        >
+          {/* Tab 1: Home */}
           <TouchableOpacity
-            style={styles.addExistingBtnPurple}
-            onPress={() => setShowAddExistingModal(true)}
-            activeOpacity={0.85}
+            style={styles.navTab}
+            onPress={() => setActiveTab('Home')}
+            activeOpacity={0.8}
           >
-            <AppIcon name="user-plus" size={20} color="#7C3AED" />
-            <Text style={styles.addExistingBtnTextPurple}>Add Existing Member</Text>
+            <AppIcon name="home" size={24} color={activeTab === 'Home' ? '#00A896' : '#8E9CAE'} />
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'Home' ? styles.navLabelActive : styles.navLabelInactive,
+              ]}
+            >
+              Home
+            </Text>
+            {activeTab === 'Home' ? <View style={styles.activeTabIndicator} /> : <View style={styles.tabIndicatorPlaceholder} />}
           </TouchableOpacity>
 
-          {/* New Member Button (Solid vibrant blue) */}
+          {/* Tab 2: Visits */}
           <TouchableOpacity
-            style={styles.newMemberBtn}
-            onPress={() => setShowNewMemberModal(true)}
-            activeOpacity={0.85}
+            style={styles.navTab}
+            onPress={() => {
+              setActiveTab('Visits');
+              handleQuickBookVisit();
+            }}
+            activeOpacity={0.8}
           >
-            <AppIcon name="user-plus" size={20} color="#FFFFFF" />
-            <Text style={styles.newMemberBtnText}>New Member</Text>
+            <AppIcon name="calendar" size={23} color={activeTab === 'Visits' ? '#00A896' : '#8E9CAE'} />
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'Visits' ? styles.navLabelActive : styles.navLabelInactive,
+              ]}
+            >
+              Visits
+            </Text>
+            {activeTab === 'Visits' ? <View style={styles.activeTabIndicator} /> : <View style={styles.tabIndicatorPlaceholder} />}
+          </TouchableOpacity>
+
+          {/* Tab 3: Reports */}
+          <TouchableOpacity
+            style={styles.navTab}
+            onPress={() => {
+              setActiveTab('Reports');
+              if (patients.length > 0) handleViewReportsForPatient(patients[0]);
+            }}
+            activeOpacity={0.8}
+          >
+            <AppIcon name="document" size={23} color={activeTab === 'Reports' ? '#00A896' : '#8E9CAE'} />
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'Reports' ? styles.navLabelActive : styles.navLabelInactive,
+              ]}
+            >
+              Reports
+            </Text>
+            {activeTab === 'Reports' ? <View style={styles.activeTabIndicator} /> : <View style={styles.tabIndicatorPlaceholder} />}
+          </TouchableOpacity>
+
+          {/* Tab 4: Care */}
+          <TouchableOpacity
+            style={styles.navTab}
+            onPress={() => {
+              setActiveTab('Care');
+              setShowContactModal(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <AppIcon name="care" size={23} color={activeTab === 'Care' ? '#00A896' : '#8E9CAE'} />
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'Care' ? styles.navLabelActive : styles.navLabelInactive,
+              ]}
+            >
+              Care
+            </Text>
+            {activeTab === 'Care' ? <View style={styles.activeTabIndicator} /> : <View style={styles.tabIndicatorPlaceholder} />}
+          </TouchableOpacity>
+
+          {/* Tab 5: Profile */}
+          <TouchableOpacity
+            style={styles.navTab}
+            onPress={() => {
+              setActiveTab('Profile');
+              setShowProfileMenu(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <AppIcon name="user-outline" size={23} color={activeTab === 'Profile' ? '#00A896' : '#8E9CAE'} />
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'Profile' ? styles.navLabelActive : styles.navLabelInactive,
+              ]}
+            >
+              Profile
+            </Text>
+            {activeTab === 'Profile' ? <View style={styles.activeTabIndicator} /> : <View style={styles.tabIndicatorPlaceholder} />}
           </TouchableOpacity>
         </View>
-
-    
       </View>
 
-      {/* CONTACT US MODAL */}
+      {/* MODAL: ADD FAMILY MEMBER */}
+      <Modal
+        visible={showAddMemberModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAddMemberModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Family Member</Text>
+              <TouchableOpacity onPress={() => setShowAddMemberModal(false)}>
+                <AppIcon name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSub}>
+              Link a family member account to manage visits and reports together.
+            </Text>
+
+            <Text style={styles.formLabel}>Full Name *</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. Aarav Chouhan"
+              placeholderTextColor="#94A3B8"
+              value={newName}
+              onChangeText={setNewName}
+            />
+
+            <View style={styles.formSplitRow}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.formLabel}>Gender</Text>
+                <View style={styles.genderRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.genderOption,
+                      newSex === 'M' && styles.genderOptionActive,
+                    ]}
+                    onPress={() => setNewSex('M')}
+                  >
+                    <Text
+                      style={[
+                        styles.genderOptionText,
+                        newSex === 'M' && styles.genderOptionTextActive,
+                      ]}
+                    >
+                      Male
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.genderOption,
+                      newSex === 'F' && styles.genderOptionActive,
+                    ]}
+                    onPress={() => setNewSex('F')}
+                  >
+                    <Text
+                      style={[
+                        styles.genderOptionText,
+                        newSex === 'F' && styles.genderOptionTextActive,
+                      ]}
+                    >
+                      Female
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.formLabel}>Age *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. 8"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  value={newAge}
+                  onChangeText={setNewAge}
+                />
+              </View>
+            </View>
+
+            <Text style={styles.formLabel}>Relationship</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. You, Wife, Son, Daughter"
+              placeholderTextColor="#94A3B8"
+              value={newRelation}
+              onChangeText={setNewRelation}
+            />
+
+            <Text style={styles.formLabel}>Patient Number (Optional)</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. 109282830"
+              placeholderTextColor="#94A3B8"
+              keyboardType="number-pad"
+              value={newPatientNo}
+              onChangeText={setNewPatientNo}
+            />
+
+            <TouchableOpacity
+              style={styles.primaryModalBtn}
+              onPress={handleAddNewMember}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.primaryModalBtnText}>Add Member to Family</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: PATIENT CARD OPTIONS */}
+      <Modal
+        visible={!!selectedPatient}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedPatient(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>{selectedPatient?.name}</Text>
+                <Text style={styles.modalSub}>
+                  Patient No: {selectedPatient?.patientNumber} • {selectedPatient?.relation}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedPatient(null)}>
+                <AppIcon name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.actionRow}
+              onPress={() => {
+                if (selectedPatient) handleBookAppointmentForPatient(selectedPatient);
+              }}
+            >
+              <View style={[styles.actionIconBg, { backgroundColor: '#E0F2FE' }]}>
+                <AppIcon name="calendar" size={20} color="#0284C7" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionText}>Book Doctor Visit</Text>
+                <Text style={styles.actionSubtext}>Select specialist & consultation slot</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionRow}
+              onPress={() => {
+                if (selectedPatient) handleViewReportsForPatient(selectedPatient);
+              }}
+            >
+              <View style={[styles.actionIconBg, { backgroundColor: '#E8FAF6' }]}>
+                <AppIcon name="document" size={20} color="#00A896" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.actionText}>View Medical & Lab Reports</Text>
+                <Text style={styles.actionSubtext}>Diagnostic tests, prescriptions & bills</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionRow}
+              onPress={() => {
+                if (selectedPatient) handleRemoveMember(selectedPatient.id);
+              }}
+            >
+              <View style={[styles.actionIconBg, { backgroundColor: '#FEF2F2' }]}>
+                <AppIcon name="trash" size={20} color="#DC2626" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.actionText, { color: '#DC2626' }]}>Remove Member</Text>
+                <Text style={styles.actionSubtext}>Remove this profile from your family</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: CONTACT US / NOTIFICATIONS */}
       <Modal
         visible={showContactModal}
         transparent
@@ -324,8 +710,8 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <AppIcon name="hospital" size={24} color="#1D61E7" />
-                <Text style={[styles.modalTitle, { marginLeft: 8 }]}>Bethany Hospitals</Text>
+                <AppIcon name="bell" size={22} color="#0284C7" />
+                <Text style={[styles.modalTitle, { marginLeft: 8 }]}>Notifications & Support</Text>
               </View>
               <TouchableOpacity onPress={() => setShowContactModal(false)}>
                 <AppIcon name="close" size={22} color="#64748B" />
@@ -333,22 +719,22 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             </View>
 
             <Text style={styles.modalSub}>
-              We are available 24/7 for you and your family.
+              24/7 Patient Care Services & Helpline.
             </Text>
 
             <View style={styles.contactItem}>
-              <View style={styles.contactIconBg}>
+              <View style={[styles.contactIconBg, { backgroundColor: '#FEE2E2' }]}>
                 <AppIcon name="phone" size={20} color="#DC2626" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.contactItemLabel}>24x7 Emergency & Ambulance</Text>
+                <Text style={styles.contactItemLabel}>Emergency & Ambulance</Text>
                 <Text style={styles.contactItemVal}>1066 / +91 22 2172 5100</Text>
               </View>
             </View>
 
             <View style={styles.contactItem}>
-              <View style={styles.contactIconBg}>
-                <AppIcon name="calendar" size={20} color="#1D61E7" />
+              <View style={[styles.contactIconBg, { backgroundColor: '#DEF0FD' }]}>
+                <AppIcon name="calendar" size={20} color="#0284C7" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.contactItemLabel}>Appointment Desk</Text>
@@ -357,22 +743,12 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             </View>
 
             <View style={styles.contactItem}>
-              <View style={styles.contactIconBg}>
-                <AppIcon name="shield-check" size={20} color="#16A34A" />
+              <View style={[styles.contactIconBg, { backgroundColor: '#E8FAF6' }]}>
+                <AppIcon name="shield-check" size={20} color="#00A896" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.contactItemLabel}>WhatsApp Support</Text>
+                <Text style={styles.contactItemLabel}>WhatsApp Assistance</Text>
                 <Text style={styles.contactItemVal}>+91 98198 63084</Text>
-              </View>
-            </View>
-
-            <View style={styles.contactItem}>
-              <View style={styles.contactIconBg}>
-                <AppIcon name="hospital" size={20} color="#6366F1" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.contactItemLabel}>Location</Text>
-                <Text style={styles.contactItemVal}>Pokhran Road No. 2, Thane (W), MH</Text>
               </View>
             </View>
 
@@ -386,260 +762,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
         </View>
       </Modal>
 
-      {/* ADD EXISTING MEMBER MODAL */}
-      <Modal
-        visible={showAddExistingModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAddExistingModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Link Existing Member</Text>
-              <TouchableOpacity onPress={() => setShowAddExistingModal(false)}>
-                <AppIcon name="close" size={22} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.modalSub}>
-              Link an existing Bethany Hospital patient record to your family portal.
-            </Text>
-
-            <Text style={styles.formLabel}>Patient Number (UHID)</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. 1113227"
-              placeholderTextColor="#94A3B8"
-              keyboardType="number-pad"
-              value={existPatientNo}
-              onChangeText={setExistPatientNo}
-            />
-
-            <Text style={styles.formLabel}>Registered Mobile Number</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="10-digit mobile number"
-              placeholderTextColor="#94A3B8"
-              keyboardType="number-pad"
-              maxLength={10}
-              value={existMobile}
-              onChangeText={setExistMobile}
-            />
-
-            <View style={styles.rowFields}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.formLabel}>Gender</Text>
-                <View style={styles.genderRow}>
-                  {(['M', 'F'] as const).map((g) => (
-                    <TouchableOpacity
-                      key={g}
-                      style={[
-                        styles.genderBtn,
-                        existGender === g && styles.genderBtnActive,
-                      ]}
-                      onPress={() => setExistGender(g)}
-                    >
-                      <Text
-                        style={[
-                          styles.genderBtnText,
-                          existGender === g && styles.genderBtnTextActive,
-                        ]}
-                      >
-                        {g === 'M' ? 'Male 👨' : 'Female 👩'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.formLabel}>Relationship</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Spouse"
-                  placeholderTextColor="#94A3B8"
-                  value={existRelation}
-                  onChangeText={setExistRelation}
-                />
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={styles.primaryModalBtn}
-              onPress={handleAddExisting}
-            >
-              <Text style={styles.primaryModalBtnText}>Link Patient Account</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* NEW MEMBER MODAL */}
-      <Modal
-        visible={showNewMemberModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowNewMemberModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Register New Member</Text>
-              <TouchableOpacity onPress={() => setShowNewMemberModal(false)}>
-                <AppIcon name="close" size={22} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.modalSub}>
-              Add a new family member to book appointments and track records.
-            </Text>
-
-            <Text style={styles.formLabel}>Full Name *</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. Ananya Deshmukh"
-              placeholderTextColor="#94A3B8"
-              value={newName}
-              onChangeText={setNewName}
-            />
-
-            <View style={styles.rowFields}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.formLabel}>Gender</Text>
-                <View style={styles.genderRow}>
-                  {(['M', 'F'] as const).map((g) => (
-                    <TouchableOpacity
-                      key={g}
-                      style={[
-                        styles.genderBtn,
-                        newSex === g && styles.genderBtnActive,
-                      ]}
-                      onPress={() => setNewSex(g)}
-                    >
-                      <Text
-                        style={[
-                          styles.genderBtnText,
-                          newSex === g && styles.genderBtnTextActive,
-                        ]}
-                      >
-                        {g === 'M' ? 'Male 👨' : 'Female 👩'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.formLabel}>Age (Years) *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 7"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="number-pad"
-                  value={newAge}
-                  onChangeText={setNewAge}
-                />
-              </View>
-            </View>
-
-            <Text style={styles.formLabel}>Relationship</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. Son, Daughter, Mother, Spouse"
-              placeholderTextColor="#94A3B8"
-              value={newRelation}
-              onChangeText={setNewRelation}
-            />
-
-            <Text style={styles.formLabel}>Mobile Number</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="10-digit mobile"
-              placeholderTextColor="#94A3B8"
-              keyboardType="number-pad"
-              maxLength={10}
-              value={newMobile}
-              onChangeText={setNewMobile}
-            />
-
-            <TouchableOpacity
-              style={styles.primaryModalBtn}
-              onPress={handleAddNewMember}
-            >
-              <Text style={styles.primaryModalBtnText}>Add Member to Family</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* PATIENT OPTIONS SHEET / MODAL */}
-      <Modal
-        visible={!!selectedPatient}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedPatient(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>{selectedPatient?.name}</Text>
-                <Text style={styles.modalSub}>
-                  Patient ID: #{selectedPatient?.patientNumber}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setSelectedPatient(null)}>
-                <AppIcon name="close" size={22} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={styles.actionRow}
-              onPress={() => {
-                setSelectedPatient(null);
-                Alert.alert('Book Appointment', `Select appointment slot for ${selectedPatient?.name}.`);
-              }}
-            >
-              <View style={[styles.actionIconBg, { backgroundColor: '#EFF6FF' }]}>
-                <AppIcon name="calendar" size={20} color="#1D61E7" />
-              </View>
-              <Text style={styles.actionText}>Book Doctor Appointment</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionRow}
-              onPress={() => {
-                setSelectedPatient(null);
-                Alert.alert('Lab Reports', `Viewing diagnostic and prescription records for ${selectedPatient?.name}.`);
-              }}
-            >
-              <View style={[styles.actionIconBg, { backgroundColor: '#ECFDF5' }]}>
-                <AppIcon name="document" size={20} color="#16A34A" />
-              </View>
-              <Text style={styles.actionText}>View Medical & Lab Reports</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionRow}
-              onPress={() => {
-                if (selectedPatient) {
-                  handleRemoveMember(selectedPatient.id);
-                }
-              }}
-            >
-              <View style={[styles.actionIconBg, { backgroundColor: '#FEF2F2' }]}>
-                <AppIcon name="trash" size={20} color="#DC2626" />
-              </View>
-              <Text style={[styles.actionText, { color: '#DC2626' }]}>
-                Unlink From Family
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* PROFILE / MENU MODAL */}
+      {/* MODAL: PROFILE SETTINGS */}
       <Modal
         visible={showProfileMenu}
         transparent
@@ -656,12 +779,12 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             </View>
 
             <View style={styles.userProfileHeader}>
-              <View style={styles.profileAvatarCircle}>
-                <AppIcon name="user" size={26} color="#1D61E7" />
+              <View style={styles.profileModalAvatar}>
+                <Text style={styles.profileModalAvatarText}>{userInitial}</Text>
               </View>
               <View style={{ marginLeft: 14 }}>
-                <Text style={styles.profileName}>{userSession.name || 'Account Holder'}</Text>
-                <Text style={styles.profilePhone}>+91 {userSession.mobileNumber}</Text>
+                <Text style={styles.profileName}>{userSession.name || 'Deepak Chouhan'}</Text>
+                <Text style={styles.profilePhone}>+91 {userSession.mobileNumber || '73737377373'}</Text>
               </View>
             </View>
 
@@ -672,8 +795,8 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
                 onChangePin();
               }}
             >
-              <View style={[styles.actionIconBg, { backgroundColor: '#EFF6FF' }]}>
-                <AppIcon name="key" size={20} color="#1D61E7" />
+              <View style={[styles.actionIconBg, { backgroundColor: '#DEF0FD' }]}>
+                <AppIcon name="key" size={20} color="#0284C7" />
               </View>
               <Text style={styles.actionText}>Change Security PIN</Text>
             </TouchableOpacity>
@@ -685,10 +808,10 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
                 setShowContactModal(true);
               }}
             >
-              <View style={[styles.actionIconBg, { backgroundColor: '#F8FAFC' }]}>
-                <AppIcon name="phone" size={20} color="#1D61E7" />
+              <View style={[styles.actionIconBg, { backgroundColor: '#E8FAF6' }]}>
+                <AppIcon name="phone" size={20} color="#00A896" />
               </View>
-              <Text style={styles.actionText}>Contact Bethany Hospitals</Text>
+              <Text style={styles.actionText}>Help & Support</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -709,6 +832,13 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
           </View>
         </View>
       </Modal>
+
+      {/* Universal Loader with App Icon and Status Message */}
+      <UniversalLoader
+        visible={loaderState.visible}
+        message={loaderState.message}
+        subtitle={loaderState.subtitle}
+      />
     </SafeAreaView>
   );
 };
@@ -716,286 +846,299 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#C5DEF8',
-  },
-  headerContainer: {
-    backgroundColor: '#E8F2FE',
-    paddingTop: 8,
-    paddingHorizontal: 22,
-    paddingBottom: 22,
-  },
-  headerTopBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  contactUsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#D4E2F6',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-    marginRight: 8,
   },
-  contactUsText: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginLeft: 6,
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
   },
-  menuIconBtn: {
-    padding: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#D4E2F6',
-  },
-  headerContentRow: {
+
+  // 1. PROPER TOP HEADER BAR (with border and crisp background)
+  headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
-    paddingHorizontal: 0,
-    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 10,
   },
-  headerTitlesCol: {
+  headerLeftGroup: {
     flex: 1,
-    paddingLeft: 30,
-    justifyContent: 'center',
   },
-  titleSingleLine: {
-    fontSize: 27,
+  headerTitle: {
+    fontSize: 23,
+    letterSpacing: -0.4,
+  },
+  headerTitleNavy: {
     fontWeight: '800',
     color: '#0F172A',
-    letterSpacing: -0.5,
   },
-  titleBlue: {
-    color: '#1D61E7',
+  headerTitleTeal: {
     fontWeight: '800',
+    color: '#00A896',
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#556880',
-    marginTop: 6,
-    lineHeight: 20,
+    fontSize: 12.5,
+    color: '#64748B',
+    marginTop: 2,
     fontWeight: '500',
   },
-  bannerArtContainer: {
-    width: 215,
-    height: 180,
-    alignItems: 'flex-end',
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  bellButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  bellBadgeDot: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  profileInitialCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#BAE6FD',
+  },
+  profileInitialText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0284C7',
+  },
+
+  // 2. SCROLL CONTENT (Adjusted padding to remove excessive side gaps)
+  scrollContent: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+
+  // 4 FEATURE COLUMNS ROW: Distributed equally, no borders around or between
+  featureRowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: 10,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  featureCol: {
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  headerBannerArt: {
-    width: '130%',
-    height: '100%',
-    right:30
+  featureIconWrapper: {
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
-  curvedParentSection: {
-    flex: 1,
-    backgroundColor: '#F8FAFD',
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-    paddingTop: 18,
-    overflow: 'hidden',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 4,
+  featureLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: 4,
+    textAlign: 'center',
   },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 4,
+
+  // 3. SECTION HEADER ROW (Clean title without redundant add icon)
+  sectionHeaderRow: {
+    marginTop: 6,
+    marginBottom: 10,
+    paddingHorizontal: 2,
   },
-  cardContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 18,
-    marginBottom: 16,
+  sectionTitleText: {
+    fontSize: 18.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+
+  // 4. PATIENT CARD DESIGN (Adjusted width & professional typography)
+  patientCard: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
     elevation: 2,
-    width: '100%',
-  },
-  leftColumn: {
-    alignItems: 'center',
-    width: 98,
   },
   avatarCircle: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden',
+    marginRight: 12,
+  },
+  avatarImage: {
+    width: 66,
+    height: 66,
+  },
+  cardRightContent: {
+    flex: 1,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  nameAndTagGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cardPatientName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#008494',
+    letterSpacing: -0.2,
+  },
+  // Relation Tag with Green app theme background and White bold text in ALL CAPS
+  relationTag: {
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: '#00A896',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarImage: {
-    width: 92,
-    height: 92,
+  relationTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
-  registeredBadge: {
+  chevronCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#EDF6FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // 3-COLUMN GRID INSIDE CARD (Balanced widths)
+  threeColumnGrid: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    borderRadius: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 4.5,
-    marginTop: 9,
-    borderWidth: 0.5,
-    borderColor: '#A7F3D0',
-  },
-  registeredBadgeText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#16A34A',
-    marginLeft: 3,
-  },
-  rightColumn: {
-    flex: 1,
-    paddingLeft: 14,
-  },
-  nameHeaderRow: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    marginTop: 2,
   },
-  patientName: {
-    fontSize: 15.5,
-    fontWeight: '800',
-    color: '#0F172A',
-    flex: 1,
-    marginRight: 6,
-    letterSpacing: 0.2,
-  },
-  dotsButton: {
-    padding: 2,
-  },
-  detailsGrid: {
-    gap: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconCell: {
-    width: 22,
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  detailLabel: {
-    fontSize: 13,
-    color: '#4B5563',
-    fontWeight: '500',
+  infoCol: {
     flex: 1,
   },
-  detailValue: {
-    fontSize: 13.5,
-    color: '#1E293B',
+  infoColLabel: {
+    fontSize: 11,
     fontWeight: '600',
+    color: '#64748B',
   },
-  statusRegisteredText: {
-    color: '#16A34A',
+  infoColValue: {
+    fontSize: 12.5,
     fontWeight: '700',
-  },
-  mobileNumberText: {
-    color: '#1D61E7',
-    fontWeight: '700',
-  },
-  patientNumberText: {
     color: '#0F172A',
-    fontWeight: '800',
+    marginTop: 2,
   },
-  stickyBottomContainer: {
+  colDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E2E8F0',
+    marginHorizontal: 6,
+  },
+
+  // 5. FLOATING FIXED BOTTOM NAVIGATION BAR
+  bottomNavBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingTop: 10,
     borderTopWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingTop: 14,
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
     elevation: 12,
+    zIndex: 100,
   },
-  buttonsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  addExistingBtnPurple: {
-    flex: 1,
-    flexDirection: 'row',
+  navTab: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F5F0FF',
-    borderWidth: 1.5,
-    borderColor: '#C4B5FD',
-    borderRadius: 16,
-    paddingVertical: 14,
-    marginRight: 8,
+    paddingHorizontal: 8,
   },
-  addExistingBtnTextPurple: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#7C3AED',
-    marginLeft: 6,
+  navLabel: {
+    fontSize: 11,
+    marginTop: 3,
   },
-  newMemberBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1D61E7',
-    borderRadius: 16,
-    paddingVertical: 14,
-    marginLeft: 8,
-    shadowColor: '#1D61E7',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  newMemberBtnText: {
-    fontSize: 14,
+  navLabelActive: {
     fontWeight: '700',
-    color: '#FFFFFF',
-    marginLeft: 6,
+    color: '#00A896',
   },
-  confidentialFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
-  confidentialText: {
-    fontSize: 12.5,
-    color: '#64748B',
+  navLabelInactive: {
     fontWeight: '500',
-    marginLeft: 6,
+    color: '#64748B',
   },
+  activeTabIndicator: {
+    width: 32,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#00A896',
+    marginTop: 3,
+  },
+  tabIndicatorPlaceholder: {
+    width: 32,
+    height: 3,
+    marginTop: 3,
+  },
+
+  // MODAL STYLES
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(11, 35, 65, 0.52)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -1008,8 +1151,8 @@ const styles = StyleSheet.create({
     padding: 22,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
     elevation: 6,
   },
   modalHeader: {
@@ -1019,15 +1162,15 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   modalTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '800',
     color: '#0F172A',
   },
   modalSub: {
-    fontSize: 13.5,
+    fontSize: 13,
     color: '#64748B',
     marginBottom: 16,
-    lineHeight: 19,
+    lineHeight: 18,
   },
   contactItem: {
     flexDirection: 'row',
@@ -1040,18 +1183,17 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
   },
   contactItemLabel: {
-    fontSize: 12.5,
+    fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
   },
   contactItemVal: {
-    fontSize: 15,
+    fontSize: 14.5,
     color: '#0F172A',
     fontWeight: '700',
     marginTop: 2,
@@ -1059,87 +1201,120 @@ const styles = StyleSheet.create({
   modalCloseBtn: {
     backgroundColor: '#F1F5F9',
     borderRadius: 14,
-    paddingVertical: 13,
+    paddingVertical: 12,
     alignItems: 'center',
     marginTop: 18,
   },
   modalCloseBtnText: {
-    color: '#334155',
+    fontSize: 14,
     fontWeight: '700',
-    fontSize: 14.5,
+    color: '#475569',
   },
+
+  // FORM INPUTS
   formLabel: {
-    fontSize: 13.5,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#334155',
     marginBottom: 6,
-    marginTop: 10,
+    marginTop: 8,
   },
   formInput: {
     backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 14,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 14,
     color: '#0F172A',
-    marginBottom: 4,
   },
-  rowFields: {
+  formSplitRow: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   genderRow: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    padding: 3,
-    height: 46,
+    gap: 8,
   },
-  genderBtn: {
+  genderOption: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 10,
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
   },
-  genderBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+  genderOptionActive: {
+    backgroundColor: '#00A896',
+    borderColor: '#00A896',
   },
-  genderBtnText: {
+  genderOptionText: {
     fontSize: 13,
-    color: '#64748B',
     fontWeight: '600',
+    color: '#475569',
   },
-  genderBtnTextActive: {
-    color: '#1D61E7',
-    fontWeight: '800',
+  genderOptionTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   primaryModalBtn: {
-    backgroundColor: '#1D61E7',
+    backgroundColor: '#00A896',
     borderRadius: 14,
-    paddingVertical: 15,
+    paddingVertical: 14,
     alignItems: 'center',
     marginTop: 18,
-    shadowColor: '#1D61E7',
+    shadowColor: '#00A896',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 3,
   },
   primaryModalBtnText: {
+    fontSize: 14.5,
+    fontWeight: '700',
     color: '#FFFFFF',
+  },
+
+  // PROFILE / ACTIONS SHEET
+  userProfileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 14,
+    borderRadius: 16,
+    marginVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  profileModalAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#DEF0FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileModalAvatarText: {
+    fontSize: 18,
     fontWeight: '800',
-    fontSize: 15.5,
+    color: '#0284C7',
+  },
+  profileName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  profilePhone: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 13,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: '#F1F5F9',
   },
@@ -1149,38 +1324,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   actionText: {
     fontSize: 14.5,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  userProfileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    padding: 14,
-    borderRadius: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  profileAvatarCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#EFF6FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileName: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
   },
-  profilePhone: {
-    fontSize: 13,
+  actionSubtext: {
+    fontSize: 12,
     color: '#64748B',
     marginTop: 2,
   },

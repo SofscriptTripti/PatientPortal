@@ -3,6 +3,7 @@ import { StyleProp, TextStyle } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Entypo from 'react-native-vector-icons/Entypo';
 
 export type IconType =
   | 'user'
@@ -29,7 +30,20 @@ export type IconType =
   | 'refresh'
   | 'info'
   | 'search'
-  | 'document';
+  | 'document'
+  | 'arrow-right'
+  | 'chevron-down'
+  | 'chevron-right'
+  | 'users'
+  | 'heart'
+  | 'home'
+  | 'bell'
+  | 'apple'
+  | 'care'
+  | 'user-outline'
+  | 'wallet'
+  | 'food-apple'
+  | 'person-add';
 
 interface IconProps {
   name: IconType;
@@ -47,14 +61,19 @@ export const AppIcon: React.FC<IconProps> = ({
   switch (name) {
     case 'user':
       return <Ionicons name="person" size={size} color={color} style={style} />;
+    case 'user-outline':
+      return <MaterialCommunityIcons name="account-outline" size={size} color={color} style={style} />;
     case 'user-check':
       return <MaterialCommunityIcons name="account-check" size={size} color={color} style={style} />;
     case 'user-plus':
-      return <MaterialCommunityIcons name="account-plus" size={size} color={color} style={style} />;
+    case 'person-add':
+      return <Ionicons name="person-add" size={size} color={color} style={style} />;
+    case 'users':
+      return <MaterialCommunityIcons name="account-group" size={size} color={color} style={style} />;
     case 'phone':
       return <Ionicons name="call" size={size} color={color} style={style} />;
     case 'shield-check':
-      return <MaterialCommunityIcons name="shield-check" size={size} color={color} style={style} />;
+      return <MaterialCommunityIcons name="shield-check-outline" size={size} color={color} style={style} />;
     case 'patient-id':
       return <MaterialCommunityIcons name="badge-account-horizontal" size={size} color={color} style={style} />;
     case 'dots-horizontal':
@@ -71,6 +90,10 @@ export const AppIcon: React.FC<IconProps> = ({
       return <Ionicons name="arrow-back" size={size} color={color} style={style} />;
     case 'check':
       return <Ionicons name="checkmark-sharp" size={size} color={color} style={style} />;
+    case 'arrow-right':
+      return <Ionicons name="arrow-forward" size={size} color={color} style={style} />;
+    case 'chevron-down':
+      return <Ionicons name="chevron-down" size={size} color={color} style={style} />;
     case 'calendar':
       return <MaterialCommunityIcons name="calendar-month-outline" size={size} color={color} style={style} />;
     case 'hospital':
@@ -95,6 +118,21 @@ export const AppIcon: React.FC<IconProps> = ({
       return <Ionicons name="search" size={size} color={color} style={style} />;
     case 'document':
       return <MaterialCommunityIcons name="file-document-outline" size={size} color={color} style={style} />;
+    case 'wallet':
+      return <Entypo name="wallet" size={size} color={color} style={style} />;
+    case 'heart':
+      return <Ionicons name="heart" size={size} color={color} style={style} />;
+    case 'home':
+      return <Ionicons name="home" size={size} color={color} style={style} />;
+    case 'bell':
+      return <Ionicons name="notifications-outline" size={size} color={color} style={style} />;
+    case 'apple':
+    case 'food-apple':
+      return <MaterialCommunityIcons name="food-apple" size={size} color={color} style={style} />;
+    case 'chevron-right':
+      return <Ionicons name="chevron-forward" size={size} color={color} style={style} />;
+    case 'care':
+      return <MaterialCommunityIcons name="heart-pulse" size={size} color={color} style={style} />;
     default:
       return <Ionicons name="ellipse" size={size} color={color} style={style} />;
   }

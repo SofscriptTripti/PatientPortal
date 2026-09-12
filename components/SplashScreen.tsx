@@ -1,46 +1,153 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Animated, Dimensions } from 'react-native';
+import {
+  StyleSheet,
+  Animated,
+  View,
+  Text,
+  Image,
+  useWindowDimensions,
+  Platform,
+} from 'react-native';
 
 interface SplashScreenProps {
   onFinish: () => void;
-  duration?: number; // Duration in milliseconds to show the splash before fading out
+  duration?: number; // Duration in milliseconds before fading out
 }
 
-const { width } = Dimensions.get('window');
+export default function SplashScreen({ onFinish, duration = 2500 }: SplashScreenProps) {
+  const { width, height } = useWindowDimensions();
+  const isTablet = width >= 600 || height >= 950;
 
-export default function SplashScreen({ onFinish, duration = 3000 }: SplashScreenProps) {
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  // Animations
+  const screenFadeAnim = useRef(new Animated.Value(1)).current;
+  const logoScaleAnim = useRef(new Animated.Value(0.82)).current;
+  const logoFadeAnim = useRef(new Animated.Value(0)).current;
+  const textFadeAnim = useRef(new Animated.Value(0)).current;
+  const textSlideAnim = useRef(new Animated.Value(14)).current;
 
   useEffect(() => {
-    // Start a timer to fade out the splash screen
+    // 1. Entrance animation (Logo pops & fades in, then text slides up)
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(logoScaleAnim, {
+          toValue: 1,
+          friction: 6,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoFadeAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(textFadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(textSlideAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
+    // 2. Exit transition: fade out after specified duration
     const timer = setTimeout(() => {
-      Animated.timing(fadeAnim, {
+      Animated.timing(screenFadeAnim, {
         toValue: 0,
-        duration: 600, // 600ms fade out transition
+        duration: 500,
         useNativeDriver: true,
       }).start(() => {
         onFinish();
       });
-    }, duration);
+    }, Math.max(duration, 1500));
 
     return () => clearTimeout(timer);
-  }, [fadeAnim, duration, onFinish]);
+  }, [duration, onFinish, screenFadeAnim, logoScaleAnim, logoFadeAnim, textFadeAnim, textSlideAnim]);
 
   return (
     <Animated.View
       style={[
         styles.container,
         {
-          backgroundColor: '#000000',
-          opacity: fadeAnim,
+          opacity: screenFadeAnim,
         },
       ]}
     >
-      <Animated.Image
-        source={require('../assets/gifs/patient_portal_splash_transparent_NO_BLACK_FINAL.gif')}
-        style={styles.gif}
-        resizeMode="contain"
-      />
+      {/* Decorative Top Accent Glow */}
+      <View style={styles.topAccentBar} />
+
+      {/* Main Center Branding */}
+      <View style={styles.centerContent}>
+        {/* Animated Patient Portal Heart Logo */}
+        <Animated.View
+          style={[
+            styles.logoWrapper,
+            isTablet && { width: 124, height: 124, borderRadius: 32 },
+            {
+              opacity: logoFadeAnim,
+              transform: [{ scale: logoScaleAnim }],
+            },
+          ]}
+        >
+          <Image
+            source={require('../assets/images/patient_portal_logo.png')}
+            style={[styles.logoImage, isTablet && { width: 110, height: 110 }]}
+            resizeMode="contain"
+          />
+        </Animated.View>
+
+        {/* Animated Brand Title & Subtitle */}
+        <Animated.View
+          style={[
+            styles.brandTextContainer,
+            {
+              opacity: textFadeAnim,
+              transform: [{ translateY: textSlideAnim }],
+            },
+          ]}
+        >
+          <View style={styles.brandTitleRow}>
+            <Text style={[styles.brandTitleDark, isTablet && { fontSize: 42 }]}>Patient </Text>
+            <Text style={[styles.brandTitleTeal, isTablet && { fontSize: 42 }]}>Portal</Text>
+          </View>
+          <Text style={[styles.brandSubtitle, isTablet && { fontSize: 16.5, marginTop: 8 }]}>
+            Care Today. Healthier Tomorrow.
+          </Text>
+
+          {/* Minimal Animated Pulse Dots */}
+          <View style={styles.pulseContainer}>
+            <View style={[styles.pulseDot, { opacity: 0.4 }]} />
+            <View style={[styles.pulseDot, { backgroundColor: '#02AAB0', transform: [{ scale: 1.25 }] }]} />
+            <View style={[styles.pulseDot, { opacity: 0.4 }]} />
+          </View>
+        </Animated.View>
+      </View>
+
+      {/* Bottom Wave Footer pinned to edge */}
+      <View style={styles.waveFooterContainer}>
+        <Image
+          source={require('../assets/images/wave_footer_bg.png')}
+          style={[
+            styles.waveFooterImage,
+            {
+              height: isTablet ? 290 : 210,
+            },
+          ]}
+          resizeMode="stretch"
+        />
+
+        {/* Subtle Bottom Trust Mark */}
+        <View style={styles.trustBadge}>
+          <Text style={[styles.trustBadgeText, isTablet && { fontSize: 13 }]}>
+            Bethany Healthcare • Secure Patient Access
+          </Text>
+        </View>
+      </View>
     </Animated.View>
   );
 }
@@ -52,12 +159,100 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
+    backgroundColor: '#F8FAFE',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  topAccentBar: {
+    width: '100%',
+    height: 4,
+    backgroundColor: '#02AAB0',
+  },
+  centerContent: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 9999, // Render on top of all other components
+    marginTop: 40,
   },
-  gif: {
-    width: width * 0.7,
-    height: width * 0.7,
+  logoWrapper: {
+    width: 96,
+    height: 96,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#00A896',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+  },
+  logoImage: {
+    width: 86,
+    height: 86,
+  },
+  brandTextContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  brandTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  brandTitleDark: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#0B2341',
+    letterSpacing: -0.5,
+  },
+  brandTitleTeal: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#02AAB0',
+    letterSpacing: -0.5,
+  },
+  brandSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#64748B',
+    marginTop: 6,
+    letterSpacing: 0.2,
+  },
+  pulseContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 28,
+  },
+  pulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#0284C7',
+  },
+  waveFooterContainer: {
+    width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  waveFooterImage: {
+    width: '100%',
+    height: 210,
+  },
+  trustBadge: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 18 : 12,
+    alignSelf: 'center',
+  },
+  trustBadgeText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#0B2341',
+    opacity: 0.75,
+    letterSpacing: 0.3,
   },
 });
