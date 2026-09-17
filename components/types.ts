@@ -21,6 +21,8 @@ export interface UserSession {
   mobileNumber: string;
   name: string;
   isLoggedIn: boolean;
+  customAvatarUri?: string;
+  userAvatar?: any;
 }
 
 export type AuthMode = 'login' | 'register';

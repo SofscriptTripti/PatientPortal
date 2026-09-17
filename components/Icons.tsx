@@ -4,6 +4,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Entypo from 'react-native-vector-icons/Entypo';
+import AntDesign from 'react-native-vector-icons/AntDesign';
 
 export type IconType =
   | 'user'
@@ -42,8 +43,20 @@ export type IconType =
   | 'care'
   | 'user-outline'
   | 'wallet'
+  | 'wallet-outline'
   | 'food-apple'
-  | 'person-add';
+  | 'food-apple-outline'
+  | 'person-add'
+  | 'usergroup-add'
+  | 'qrcode'
+  | 'bullhorn'
+  | 'history'
+  | 'location'
+  | 'card'
+  | 'clock'
+  | 'sun'
+  | 'star'
+  | 'alert-circle';
 
 interface IconProps {
   name: IconType;
@@ -120,6 +133,8 @@ export const AppIcon: React.FC<IconProps> = ({
       return <MaterialCommunityIcons name="file-document-outline" size={size} color={color} style={style} />;
     case 'wallet':
       return <Entypo name="wallet" size={size} color={color} style={style} />;
+    case 'wallet-outline':
+      return <Ionicons name="wallet-outline" size={size} color={color} style={style} />;
     case 'heart':
       return <Ionicons name="heart" size={size} color={color} style={style} />;
     case 'home':
@@ -129,10 +144,32 @@ export const AppIcon: React.FC<IconProps> = ({
     case 'apple':
     case 'food-apple':
       return <MaterialCommunityIcons name="food-apple" size={size} color={color} style={style} />;
+    case 'food-apple-outline':
+      return <MaterialCommunityIcons name="food-apple-outline" size={size} color={color} style={style} />;
+    case 'usergroup-add':
+      return <AntDesign name="addusergroup" size={size} color={color} style={style} />;
     case 'chevron-right':
       return <Ionicons name="chevron-forward" size={size} color={color} style={style} />;
     case 'care':
       return <MaterialCommunityIcons name="heart-pulse" size={size} color={color} style={style} />;
+    case 'qrcode':
+      return <MaterialCommunityIcons name="qrcode-scan" size={size} color={color} style={style} />;
+    case 'bullhorn':
+      return <MaterialCommunityIcons name="bullhorn-outline" size={size} color={color} style={style} />;
+    case 'history':
+      return <MaterialCommunityIcons name="history" size={size} color={color} style={style} />;
+    case 'location':
+      return <Ionicons name="location-outline" size={size} color={color} style={style} />;
+    case 'card':
+      return <Ionicons name="card-outline" size={size} color={color} style={style} />;
+    case 'clock':
+      return <Ionicons name="time-outline" size={size} color={color} style={style} />;
+    case 'sun':
+      return <Ionicons name="sunny-outline" size={size} color={color} style={style} />;
+    case 'star':
+      return <Ionicons name="star" size={size} color={color} style={style} />;
+    case 'alert-circle':
+      return <Ionicons name="alert-circle" size={size} color={color} style={style} />;
     default:
       return <Ionicons name="ellipse" size={size} color={color} style={style} />;
   }

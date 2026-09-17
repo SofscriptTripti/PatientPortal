@@ -180,6 +180,18 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
                   </ImageBackground>
                 </TouchableOpacity>
 
+                {/* Don't have Acc ? Register Now (Left Side) */}
+                <View style={[styles.registerPromptRow, isTablet && { marginTop: 14 }]}>
+                  <Text style={[styles.dontHaveAccText, isTablet && { fontSize: 14.5 }]}>Don't have Acc ? </Text>
+                  <TouchableOpacity
+                    onPress={onOpenRegister}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+                  >
+                    <Text style={[styles.registerNowLink, isTablet && { fontSize: 14.5 }]}>Register Now.</Text>
+                  </TouchableOpacity>
+                </View>
+
                 {/* Security trust badge */}
                 <View style={[styles.secureBadgeRow, isTablet && { marginTop: 16 }]}>
                   <AppIcon name="shield-check" size={16} color="#94A3B8" />
@@ -565,6 +577,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
     alignSelf: 'center',
     marginHorizontal: 8,
+  },
+
+  // REGISTER PROMPT ROW (LEFT SIDE)
+  registerPromptRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginTop: 14,
+    paddingHorizontal: 4,
+  },
+  dontHaveAccText: {
+    fontSize: 13.5,
+    fontFamily: 'System',
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  registerNowLink: {
+    fontSize: 13.5,
+    fontFamily: 'System',
+    color: '#0083B0',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 
   // 5. BOTTOM WAVE CONTAINER (PINNED TO BOTTOM)

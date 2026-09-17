@@ -3,14 +3,14 @@ import { PatientMember } from './types';
 export const INITIAL_PATIENTS: PatientMember[] = [
   {
     id: '1',
-    name: 'Deepak Chouhan',
-    relation: 'You',
+    name: 'Rathi Vijay Sharma',
+    relation: 'Self',
     sex: 'M',
-    age: '30 Y',
+    age: '34 Y',
     maritalStatus: 'Married',
     registrationStatus: 'Registered',
-    mobileNumber: '73737377373',
-    patientNumber: '109282828',
+    mobileNumber: '9414023873',
+    patientNumber: '109282827',
     genderType: 'M',
   },
   {
@@ -35,6 +35,18 @@ export const INITIAL_PATIENTS: PatientMember[] = [
     registrationStatus: 'Registered',
     mobileNumber: '73737377375',
     patientNumber: '109282830',
+    genderType: 'M',
+  },
+  {
+    id: '4',
+    name: 'Deepak Chouhan',
+    relation: 'Brother',
+    sex: 'M',
+    age: '30 Y',
+    maritalStatus: 'Married',
+    registrationStatus: 'Registered',
+    mobileNumber: '73737377373',
+    patientNumber: '109282828',
     genderType: 'M',
   },
 ];

@@ -50,13 +50,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const otpInputRef = useRef<any>(null);
   const [storedUserName, setStoredUserName] = useState('Deepak Chouhan');
 
-  // Register form fields
+  // Register form fields (Full Name, DOB, Gender, Address, Aadhaar Card, Mobile No, OTP)
   const [regName, setRegName] = useState('');
+  const [regDob, setRegDob] = useState('');
+  const [regGender, setRegGender] = useState<'Male' | 'Female' | 'Other'>('Male');
+  const [regAddress, setRegAddress] = useState('');
+  const [regAadhaar, setRegAadhaar] = useState('');
   const [regMobile, setRegMobile] = useState('');
-  const [regGender, setRegGender] = useState<'M' | 'F' | 'Other'>('M');
-  const [regAge, setRegAge] = useState('');
-  const [regPin, setRegPin] = useState('');
-  const [regConfirmPin, setRegConfirmPin] = useState('');
+  const [regOtp, setRegOtp] = useState('');
+  const [regOtpSent, setRegOtpSent] = useState(false);
+  const [regOtpTimer, setRegOtpTimer] = useState(30);
+  const [regConsentChecked, setRegConsentChecked] = useState(false);
 
   // Modals
   const [showForgotPinModal, setShowForgotPinModal] = useState(false);
@@ -87,6 +91,19 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       if (interval) clearInterval(interval);
     };
   }, [showOtpModal, resendTimer]);
+
+  // Countdown timer for Registration OTP
+  useEffect(() => {
+    let interval: any;
+    if (authMode === 'register' && regOtpSent && regOtpTimer > 0) {
+      interval = setInterval(() => {
+        setRegOtpTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [authMode, regOtpSent, regOtpTimer]);
 
   // Auto-focus OTP input when modal appears to automatically open keyboard
   useEffect(() => {
@@ -184,41 +201,92 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     }, 500);
   };
 
-  // Register Submit
+  // Registration input formatters & actions
+  const handleDobChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    let formatted = cleaned;
+    if (cleaned.length > 2 && cleaned.length <= 4) {
+      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+    } else if (cleaned.length > 4) {
+      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4, 8)}`;
+    }
+    setRegDob(formatted);
+  };
+
+  const handleAadhaarChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '').slice(0, 12);
+    let formatted = cleaned;
+    if (cleaned.length > 4 && cleaned.length <= 8) {
+      formatted = `${cleaned.slice(0, 4)} ${cleaned.slice(4)}`;
+    } else if (cleaned.length > 8) {
+      formatted = `${cleaned.slice(0, 4)} ${cleaned.slice(4, 8)} ${cleaned.slice(8, 12)}`;
+    }
+    setRegAadhaar(formatted);
+  };
+
+  const handleSendRegOtp = () => {
+    const cleaned = regMobile.replace(/[^0-9]/g, '');
+    if (cleaned.length < 10) {
+      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit mobile number first.');
+      return;
+    }
+    setRegOtpSent(true);
+    setRegOtpTimer(30);
+    setRegOtp('');
+    Alert.alert(
+      'OTP Sent',
+      `A 4-digit verification code has been sent to +91 ${cleaned}.\n\nDemo OTP: 1234`
+    );
+  };
+
+  // Register Submit (Full Name, DOB, Gender, Address, Aadhaar, Mobile, OTP)
   const handleRegisterSubmit = () => {
     if (!regName.trim()) {
-      Alert.alert('Name Required', 'Please enter your full name.');
+      Alert.alert('Full Name Required', 'Please enter your full name.');
       return;
     }
-    if (!regMobile.trim() || regMobile.length < 10) {
-      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit mobile number.');
+    if (!regDob.trim() || regDob.length < 8) {
+      Alert.alert('Date of Birth Required', 'Please enter your Date of Birth (DD/MM/YYYY).');
       return;
     }
-    if (!regAge.trim()) {
-      Alert.alert('Age Required', 'Please enter your age.');
+    if (!regAddress.trim()) {
+      Alert.alert('Address Required', 'Please enter your residential address.');
       return;
     }
-    if (regPin.length !== 4) {
-      Alert.alert('PIN Required', 'Please set a 4-digit security PIN.');
+    const cleanAadhaar = regAadhaar.replace(/\s/g, '');
+    if (cleanAadhaar.length !== 12) {
+      Alert.alert('Aadhaar Required', 'Please enter a valid 12-digit Aadhaar Card number.');
       return;
     }
-    if (regPin !== regConfirmPin) {
-      Alert.alert('PIN Mismatch', 'Your PIN and confirm PIN do not match.');
+    const cleanMobile = regMobile.replace(/[^0-9]/g, '');
+    if (cleanMobile.length !== 10) {
+      Alert.alert('Mobile Number Required', 'Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    if (regOtp.trim().length < 4) {
+      Alert.alert('OTP Required', 'Please enter the 4-digit verification OTP. (Demo OTP: 1234)');
+      return;
+    }
+    if (!regConsentChecked) {
+      Alert.alert(
+        'Consent Required',
+        'Please tick the checkbox to confirm that you want to share your details with "Patient Portal" app before proceeding.'
+      );
       return;
     }
 
     setLoaderState({
       visible: true,
       message: 'Creating Health Account...',
-      subtitle: 'Setting up your secure patient profile',
+      subtitle: `Registering ${regName.trim()} with UHID GMCH-UD-${Math.floor(100000 + Math.random() * 900000)}`,
     });
     setTimeout(() => {
       setLoaderState({ visible: false });
-      setStoredUserName(regName.toUpperCase());
-      setMobileNumber(regMobile);
+      setStoredUserName(regName.trim());
+      setMobileNumber(cleanMobile);
       onLoginSuccess({
-        mobileNumber: regMobile,
-        name: regName.toUpperCase(),
+        mobileNumber: cleanMobile,
+        name: regName.trim(),
         isLoggedIn: true,
       });
     }, 750);
@@ -299,7 +367,38 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
       {/* REGISTER FLOW */}
       {authMode === 'register' && (
-        <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safeArea}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+          {/* TOP HEADER BAR: Centered Blue title, Curvy bottom corners, back button */}
+          <View
+            style={[
+              styles.headerBar,
+              {
+                paddingHorizontal: isTablet ? 20 : 16,
+                paddingTop: isTablet ? 14 : 10,
+                paddingBottom: isTablet ? 14 : 12,
+              },
+            ]}
+          >
+            <View style={[styles.headerSideGroup, isTablet && { width: 44 }]}>
+              <TouchableOpacity
+                onPress={() => setAuthMode('login')}
+                style={[styles.headerBackBtn, isTablet && { width: 42, height: 42, borderRadius: 21 }]}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <AppIcon name="back" size={isTablet ? 24 : 20} color="#0083B0" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.headerCenterGroup}>
+              <Text style={[styles.headerTitleCentered, isTablet && { fontSize: 24 }]}>
+                Patient Registration
+              </Text>
+            </View>
+
+            <View style={[styles.headerSideGroup, isTablet && { width: 44 }]} />
+          </View>
+
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.container}
@@ -308,75 +407,54 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               contentContainerStyle={[
                 styles.scrollContent,
                 {
-                  minHeight: height - insets.top - insets.bottom,
-                  paddingBottom: Math.max(insets.bottom, 4),
+                  paddingBottom: Math.max(insets.bottom, 20),
                 },
               ]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
               bounces={false}
             >
-              <View style={[styles.screenOuter, { minHeight: height - insets.top - insets.bottom - 4 }]}>
+              <View style={styles.screenOuter}>
                 <View style={styles.pinStepCard}>
-                  <View style={styles.stepBackRow}>
-                    <TouchableOpacity
-                      style={styles.backCircleBtn}
-                      onPress={() => setAuthMode('login')}
-                      activeOpacity={0.8}
-                    >
-                      <AppIcon name="back" size={20} color="#0F253E" />
-                    </TouchableOpacity>
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={styles.pinStepHeading}>Patient Registration</Text>
-                      <Text style={styles.pinStepSubtitle}>
-                        Create your health account to access hospital records
-                      </Text>
+                  {/* 1. Full Name */}
+                  <Text style={[styles.fieldLabel, { marginTop: 2 }]}>Full Name *</Text>
+                  <View style={styles.regInputWithIcon}>
+                    <View style={styles.fieldIconBox}>
+                      <AppIcon name="user" size={18} color="#0083B0" />
                     </View>
-                  </View>
-
-                  <Text style={styles.fieldLabel}>Full Name *</Text>
-                  <TextInput
-                    style={styles.textInputStyled}
-                    placeholder="e.g. Priya Sharma"
-                    placeholderTextColor="#94A3B8"
-                    value={regName}
-                    onChangeText={setRegName}
-                  />
-
-                  <Text style={styles.fieldLabel}>Mobile Number *</Text>
-                  <View style={styles.mobileInputRow}>
-                    <View style={styles.flagContainer}>
-                      <Text style={{ fontSize: 16 }}>🇮🇳</Text>
-                      <Text style={[styles.countryCodeText, { marginLeft: 6 }]}>+91</Text>
-                    </View>
-                    <View style={styles.inputDivider} />
                     <TextInput
-                      style={styles.mobileTextInput}
-                      placeholder="10-digit mobile number"
+                      style={styles.regTextInput}
+                      placeholder="e.g. Aarav Chouhan"
                       placeholderTextColor="#94A3B8"
-                      keyboardType="number-pad"
-                      maxLength={10}
-                      value={regMobile}
-                      onChangeText={setRegMobile}
+                      value={regName}
+                      onChangeText={setRegName}
                     />
                   </View>
 
+                  {/* 2 & 3. DOB and Gender side by side */}
                   <View style={styles.twoColumnRow}>
-                    <View style={{ flex: 1, marginRight: 8 }}>
-                      <Text style={styles.fieldLabel}>Age *</Text>
-                      <TextInput
-                        style={styles.textInputStyled}
-                        placeholder="e.g. 28"
-                        placeholderTextColor="#94A3B8"
-                        keyboardType="number-pad"
-                        value={regAge}
-                        onChangeText={setRegAge}
-                      />
+                    <View style={{ flex: 1.1, marginRight: 8 }}>
+                      <Text style={styles.fieldLabel}>Date of Birth (DOB) *</Text>
+                      <View style={styles.regInputWithIcon}>
+                        <View style={styles.fieldIconBox}>
+                          <AppIcon name="calendar" size={18} color="#0083B0" />
+                        </View>
+                        <TextInput
+                          style={styles.regTextInput}
+                          placeholder="DD / MM / YYYY"
+                          placeholderTextColor="#94A3B8"
+                          keyboardType="number-pad"
+                          maxLength={10}
+                          value={regDob}
+                          onChangeText={handleDobChange}
+                        />
+                      </View>
                     </View>
-                    <View style={{ flex: 1, marginLeft: 8 }}>
-                      <Text style={styles.fieldLabel}>Gender</Text>
+
+                    <View style={{ flex: 0.9, marginLeft: 8 }}>
+                      <Text style={styles.fieldLabel}>Gender *</Text>
                       <View style={styles.genderPillsContainer}>
-                        {(['M', 'F'] as const).map((g) => (
+                        {(['Male', 'Female', 'Other'] as const).map((g) => (
                           <TouchableOpacity
                             key={g}
                             style={[
@@ -391,7 +469,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                                 regGender === g && styles.genderPillTextActive,
                               ]}
                             >
-                              {g === 'M' ? 'Male' : 'Female'}
+                              {g === 'Other' ? 'Other' : g[0]}
                             </Text>
                           </TouchableOpacity>
                         ))}
@@ -399,32 +477,141 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     </View>
                   </View>
 
-                  <Text style={styles.fieldLabel}>Create 4-Digit Security PIN *</Text>
-                  <TextInput
-                    style={styles.textInputStyled}
-                    placeholder="••••"
-                    placeholderTextColor="#94A3B8"
-                    keyboardType="number-pad"
-                    maxLength={4}
-                    secureTextEntry
-                    value={regPin}
-                    onChangeText={setRegPin}
-                  />
+                  {/* 4. Residential Address */}
+                  <Text style={styles.fieldLabel}>Residential Address *</Text>
+                  <View style={[styles.regInputWithIcon, { height: 72, alignItems: 'flex-start', paddingTop: 10 }]}>
+                    <View style={[styles.fieldIconBox, { marginTop: 2 }]}>
+                      <AppIcon name="location" size={18} color="#0083B0" />
+                    </View>
+                    <TextInput
+                      style={[styles.regTextInput, { height: 56, textAlignVertical: 'top' }]}
+                      placeholder="House/Flat No., Street, City, Pincode"
+                      placeholderTextColor="#94A3B8"
+                      multiline
+                      value={regAddress}
+                      onChangeText={setRegAddress}
+                    />
+                  </View>
 
-                  <Text style={styles.fieldLabel}>Confirm PIN *</Text>
-                  <TextInput
-                    style={styles.textInputStyled}
-                    placeholder="••••"
-                    placeholderTextColor="#94A3B8"
-                    keyboardType="number-pad"
-                    maxLength={4}
-                    secureTextEntry
-                    value={regConfirmPin}
-                    onChangeText={setRegConfirmPin}
-                  />
+                  {/* 5. Aadhaar Card */}
+                  <Text style={styles.fieldLabel}>Aadhaar Card Number *</Text>
+                  <View style={styles.regInputWithIcon}>
+                    <View style={styles.fieldIconBox}>
+                      <AppIcon name="card" size={18} color="#0083B0" />
+                    </View>
+                    <TextInput
+                      style={styles.regTextInput}
+                      placeholder="XXXX XXXX XXXX (12-digit UIDAI)"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="number-pad"
+                      maxLength={14}
+                      value={regAadhaar}
+                      onChangeText={handleAadhaarChange}
+                    />
+                  </View>
+
+                  {/* 6. Mobile Number */}
+                  <Text style={styles.fieldLabel}>Mobile Number *</Text>
+                  <View style={styles.regInputWithIcon}>
+                    <View style={styles.flagContainer}>
+                      <Text style={{ fontSize: 16 }}>🇮🇳</Text>
+                      <Text style={[styles.countryCodeText, { marginLeft: 6 }]}>+91</Text>
+                    </View>
+                    <View style={styles.inputDivider} />
+                    <TextInput
+                      style={styles.regTextInput}
+                      placeholder="10-digit mobile number"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="number-pad"
+                      maxLength={10}
+                      value={regMobile}
+                      onChangeText={(t) => setRegMobile(t.replace(/[^0-9]/g, '').slice(0, 10))}
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.inlineSendOtpBtn,
+                        regOtpSent && regOtpTimer > 0 && { backgroundColor: '#F1F5F9' },
+                      ]}
+                      onPress={handleSendRegOtp}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.inlineSendOtpText,
+                          regOtpSent && regOtpTimer > 0 && { color: '#64748B' },
+                        ]}
+                      >
+                        {regOtpSent
+                          ? regOtpTimer > 0
+                            ? `${regOtpTimer}s`
+                            : 'Resend'
+                          : 'Get OTP'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* 7. OTP Verification */}
+                  <View style={styles.labelWithBadgeRow}>
+                    <Text style={[styles.fieldLabel, { marginTop: 0, marginBottom: 0 }]}>Enter OTP *</Text>
+                    {/* <View style={styles.demoBadge}>
+                      <Text style={styles.demoBadgeText}>Demo OTP: 1234</Text>
+                    </View> */}
+                  </View>
+                  <View style={[styles.regInputWithIcon, { marginTop: 6 }]}>
+                    <View style={styles.fieldIconBox}>
+                      <AppIcon name="key" size={18} color="#0083B0" />
+                    </View>
+                    <TextInput
+                      style={styles.regTextInput}
+                      placeholder="Enter 4-digit verification code"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="number-pad"
+                      maxLength={4}
+                      value={regOtp}
+                      onChangeText={(t) => setRegOtp(t.replace(/[^0-9]/g, '').slice(0, 4))}
+                    />
+                    {regOtp.length === 4 && (
+                      <View style={styles.verifiedCheckBadge}>
+                        <AppIcon name="check" size={16} color="#059669" />
+                      </View>
+                    )}
+                  </View>
+
+                  {/* 8. Concern / Consent Checkbox */}
+                  <TouchableOpacity
+                    style={[
+                      styles.consentBoxContainer,
+                      regConsentChecked && styles.consentBoxContainerChecked,
+                    ]}
+                    activeOpacity={0.75}
+                    onPress={() => setRegConsentChecked((prev) => !prev)}
+                  >
+                    <View
+                      style={[
+                        styles.consentCheckbox,
+                        regConsentChecked && styles.consentCheckboxChecked,
+                      ]}
+                    >
+                      {regConsentChecked && (
+                        <AppIcon name="check" size={13} color="#FFFFFF" />
+                      )}
+                    </View>
+                    <Text style={styles.consentText}>
+                      Are you sure you want to share your details with{' '}
+                      <Text style={styles.consentAppName}>
+                        "Patient Portal"{' '}
+                        <AppIcon name="hospital" size={14} color="#0083B0" />
+                      </Text>{' '}
+                      app?
+                    </Text>
+                  </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.sendOtpBtnWrapper, { marginTop: 20 }]}
+                    style={[
+                      styles.sendOtpBtnWrapper,
+                      { marginTop: 18 },
+                      !regConsentChecked && { opacity: 0.6 },
+                    ]}
                     onPress={handleRegisterSubmit}
                     activeOpacity={0.88}
                   >
@@ -813,6 +1000,48 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
+  // TOP HEADER BAR (Consistent with other screens)
+  headerBar: {
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomLeftRadius: 26,
+    borderBottomRightRadius: 26,
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#0083B0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 10,
+  },
+  headerSideGroup: {
+    width: 38,
+    justifyContent: 'center',
+  },
+  headerCenterGroup: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleCentered: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0083B0',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  headerBackBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   // REGISTER / PIN CARD STYLES
   pinStepCard: {
     backgroundColor: '#FFFFFF',
@@ -868,6 +1097,108 @@ const styles = StyleSheet.create({
     color: '#0B2341',
     backgroundColor: '#FFFFFF',
   },
+  regInputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    height: 50,
+    backgroundColor: '#FFFFFF',
+  },
+  fieldIconBox: {
+    width: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  regTextInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#0B2341',
+    paddingVertical: 0,
+  },
+  inlineSendOtpBtn: {
+    backgroundColor: '#0083B0',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  inlineSendOtpText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  labelWithBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  demoBadge: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  demoBadgeText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#0369A1',
+  },
+  verifiedCheckBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#D1FAE5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
+  consentBoxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  consentBoxContainerChecked: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#BAE6FD',
+  },
+  consentCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#94A3B8',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  consentCheckboxChecked: {
+    backgroundColor: '#0083B0',
+    borderColor: '#0083B0',
+  },
+  consentText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#334155',
+    lineHeight: 18,
+  },
+  consentAppName: {
+    fontWeight: '700',
+    color: '#0083B0',
+  },
   mobileInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -920,7 +1251,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   genderPillActive: {
-    backgroundColor: '#0284C7',
+    backgroundColor: '#0083B0',
   },
   genderPillText: {
     fontSize: 14,
@@ -938,7 +1269,7 @@ const styles = StyleSheet.create({
   },
   switchNumberText: {
     fontSize: 13.5,
-    color: '#0284C7',
+    color: '#0083B0',
     fontWeight: '600',
   },
   sendOtpBtnWrapper: {
