@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,14 @@ import {
   Alert,
   TextInput,
   useWindowDimensions,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
 import { UserSession } from './types';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
+import IMAGES from './imageAssets';
 
 export interface BillItem {
   id: string;
@@ -245,6 +247,36 @@ export const PayBillsScreen: React.FC<PayBillsScreenProps> = ({
     }, 1200);
   };
 
+  const handleHeaderBack = () => {
+    if (showPaymentModal) {
+      setShowPaymentModal(false);
+      return;
+    }
+    if (showSuccessModal) {
+      setShowSuccessModal(false);
+      return;
+    }
+    onBack();
+  };
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showPaymentModal) {
+        setShowPaymentModal(false);
+        return true;
+      }
+      if (showSuccessModal) {
+        setShowSuccessModal(false);
+        return true;
+      }
+      onBack();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [showPaymentModal, showSuccessModal, onBack]);
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
@@ -253,7 +285,8 @@ export const PayBillsScreen: React.FC<PayBillsScreenProps> = ({
           <View style={[styles.ambientTopGlow, isDark && { backgroundColor: '#1E3A5F', opacity: 0.3 }]} />
           <View style={[styles.ambientMidGlow, isDark && { backgroundColor: '#162032', opacity: 0.2 }]} />
           <Image
-            source={require('../assets/images/leaves_wave_bg.png')}
+            source={IMAGES.leavesWaveBg}
+            fadeDuration={0}
             style={[styles.ambientWaveImage, isDark && { opacity: 0.07 }]}
             resizeMode="cover"
           />
@@ -275,7 +308,7 @@ export const PayBillsScreen: React.FC<PayBillsScreenProps> = ({
           {/* Left Back Button */}
           <View style={[styles.headerSideGroup, isTablet && { width: 44 }]}>
             <TouchableOpacity
-              onPress={onBack}
+              onPress={handleHeaderBack}
               style={[
                 styles.headerBackBtn,
                 isDark && { backgroundColor: colors.borderLight },

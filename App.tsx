@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { StatusBar, StyleSheet, View, BackHandler, Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -8,22 +6,44 @@ import AuthScreen from './components/AuthScreen';
 import DashboardScreen from './components/DashboardScreen';
 import PatientListScreen from './components/PatientListScreen';
 import BookVisitScreen from './components/BookVisitScreen';
+import BookTestScreen from './components/BookTestScreen';
 import PayBillsScreen from './components/PayBillsScreen';
 import VisitsScreen from './components/VisitsScreen';
+import ReportsScreen from './components/ReportsScreen';
+import AddMemberScreen from './components/AddMemberScreen';
+import CareScreen from './components/CareScreen';
 import { CustomAlertContainer } from './components/CustomAlert';
-import { UserSession } from './components/types';
+import { UserSession, PatientMember } from './components/types';
 import { ThemeProvider, useTheme } from './components/ThemeContext';
+import { INITIAL_PATIENTS } from './components/mockData';
 
 function AppContent() {
   const { isDark, colors } = useTheme();
-  const [showSplash, setShowSplash] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState<'dashboard' | 'patient_list' | 'book_visit' | 'pay_bills' | 'visits'>('dashboard');
-  const [patientListInitialTab, setPatientListInitialTab] = useState<'Home' | 'Visits' | 'Reports' | 'Care'>('Reports');
+  const [showSplash, setShowSplash] = useState(true);
+  const [currentScreen, setCurrentScreen] = useState<'dashboard' | 'patient_list' | 'book_visit' | 'pay_bills' | 'visits' | 'reports' | 'book_test' | 'add_member' | 'care'>('dashboard');
+  const [patientListInitialTab, setPatientListInitialTab] = useState<'Home' | 'Visits' | 'Reports' | 'Care'>('Home');
+  const [autoOpenAddMember, setAutoOpenAddMember] = useState<boolean>(false);
+  const [healthPoints, setHealthPoints] = useState<number>(450);
   const [userSession, setUserSession] = useState<UserSession>({
-    mobileNumber: '9414023873',
-    name: 'Rathi Vijay Sharma',
-    isLoggedIn: true,
+    mobileNumber: '',
+    name: '',
+    isLoggedIn: false,
+    healthPoints: 450,
   });
+
+  const activeUserSession: UserSession = {
+    ...userSession,
+    healthPoints,
+  };
+
+  const handleMemberAdded = (newMember: PatientMember) => {
+    if (!INITIAL_PATIENTS.some((p) => p.id === newMember.id)) {
+      INITIAL_PATIENTS.unshift(newMember);
+    }
+    setPatientListInitialTab('Home');
+    setAutoOpenAddMember(false);
+    setCurrentScreen('patient_list');
+  };
 
   // Global Hardware Device Back Button Handler: Prevents accidental app exit
   useEffect(() => {
@@ -77,38 +97,60 @@ function AppContent() {
         {userSession.isLoggedIn ? (
           currentScreen === 'dashboard' ? (
             <DashboardScreen
-              userSession={userSession}
-              onOpenPatientList={(tab) => {
-                setPatientListInitialTab(tab || 'Reports');
+              userSession={activeUserSession}
+              onOpenPatientList={(tab, autoAdd) => {
+                setPatientListInitialTab(tab || 'Home');
+                setAutoOpenAddMember(!!autoAdd);
                 setCurrentScreen('patient_list');
               }}
+              onOpenAddMember={() => setCurrentScreen('add_member')}
               onOpenBookVisit={() => setCurrentScreen('book_visit')}
+              onOpenBookTest={() => setCurrentScreen('book_test')}
               onOpenPayBills={() => setCurrentScreen('pay_bills')}
               onOpenVisits={() => setCurrentScreen('visits')}
+              onOpenReports={() => setCurrentScreen('reports')}
+              onOpenCare={() => setCurrentScreen('care')}
               onLogout={handleLogout}
               onChangePin={handleChangePinRequest}
             />
           ) : currentScreen === 'patient_list' ? (
             <PatientListScreen
-              userSession={userSession}
+              userSession={activeUserSession}
               initialTab={patientListInitialTab}
+              autoOpenAddMember={autoOpenAddMember}
+              onOpenAddMember={() => setCurrentScreen('add_member')}
               onLogout={handleLogout}
               onChangePin={handleChangePinRequest}
               onBack={() => setCurrentScreen('dashboard')}
               onOpenVisits={() => setCurrentScreen('visits')}
+              onOpenReports={() => setCurrentScreen('reports')}
+              onOpenCare={() => setCurrentScreen('care')}
+            />
+          ) : currentScreen === 'add_member' ? (
+            <AddMemberScreen
+              userSession={activeUserSession}
+              onBack={() => setCurrentScreen('patient_list')}
+              onMemberAdded={handleMemberAdded}
             />
           ) : currentScreen === 'book_visit' ? (
             <BookVisitScreen
-              userSession={userSession}
+              userSession={activeUserSession}
               onBack={() => setCurrentScreen('dashboard')}
               onBookingSuccess={() => setCurrentScreen('dashboard')}
+            />
+          ) : currentScreen === 'book_test' ? (
+            <BookTestScreen
+              userSession={activeUserSession}
+              onBack={() => setCurrentScreen('dashboard')}
+              onOpenVisits={() => setCurrentScreen('visits')}
+              onAddHealthPoints={(pts) => setHealthPoints((prev) => prev + pts)}
             />
           ) : currentScreen === 'pay_bills' ? (
             <PayBillsScreen
               userSession={userSession}
               onBack={() => setCurrentScreen('dashboard')}
             />
-          ) : (
+          ) : currentScreen === 'visits' ? (
             <VisitsScreen
               userSession={userSession}
               onBack={() => setCurrentScreen('dashboard')}
@@ -116,6 +158,32 @@ function AppContent() {
               onOpenHome={() => setCurrentScreen('dashboard')}
               onOpenPatientList={() => {
                 setPatientListInitialTab('Reports');
+                setCurrentScreen('patient_list');
+              }}
+              onOpenReports={() => setCurrentScreen('reports')}
+              onOpenCare={() => setCurrentScreen('care')}
+            />
+          ) : currentScreen === 'reports' ? (
+            <ReportsScreen
+              userSession={userSession}
+              onBack={() => setCurrentScreen('dashboard')}
+              onOpenHome={() => setCurrentScreen('dashboard')}
+              onOpenVisits={() => setCurrentScreen('visits')}
+              onOpenPatientList={() => {
+                setPatientListInitialTab('Reports');
+                setCurrentScreen('patient_list');
+              }}
+              onOpenCare={() => setCurrentScreen('care')}
+            />
+          ) : (
+            <CareScreen
+              userSession={activeUserSession}
+              onBack={() => setCurrentScreen('dashboard')}
+              onOpenHome={() => setCurrentScreen('dashboard')}
+              onOpenVisits={() => setCurrentScreen('visits')}
+              onOpenReports={() => setCurrentScreen('reports')}
+              onOpenPatientList={() => {
+                setPatientListInitialTab('Home');
                 setCurrentScreen('patient_list');
               }}
             />

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
+import IMAGES from './imageAssets';
 
 interface OtpScreenProps {
   mobileNumber: string;
@@ -84,7 +85,8 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
             <View style={[styles.otpBrandCentered, isTablet && { marginTop: 14, marginBottom: 20 }]}>
               <View style={styles.brandRow}>
                 <Image
-                  source={require('../assets/images/patient_portal_logo.png')}
+                  source={IMAGES.patientPortalLogo}
+                  fadeDuration={0}
                   style={[styles.portalLogo, isTablet && { width: 66, height: 66 }]}
                   resizeMode="contain"
                 />
@@ -194,7 +196,8 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
                 activeOpacity={0.88}
               >
                 <ImageBackground
-                  source={require('../assets/images/btn_gradient_bg.png')}
+                  source={IMAGES.btnGradientBg}
+                  fadeDuration={0}
                   style={styles.sendOtpGradient}
                   imageStyle={styles.sendOtpGradientImg}
                 >
@@ -209,7 +212,8 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
             {/* Bottom Leaves and Wave covering footer */}
             <View style={[styles.otpLeavesWaveContainer, isTablet && { height: 360 }]}>
               <Image
-                source={require('../assets/images/leaves_wave_bg.png')}
+                source={IMAGES.leavesWaveBg}
+                fadeDuration={0}
                 style={[styles.otpLeavesWaveImage, isTablet && { height: 360 }]}
                 resizeMode="stretch"
               />

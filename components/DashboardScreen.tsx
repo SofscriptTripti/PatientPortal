@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,19 +11,25 @@ import {
   Switch,
   Animated,
   useWindowDimensions,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
 import { UserSession } from './types';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
+import IMAGES from './imageAssets';
 
 interface DashboardScreenProps {
   userSession: UserSession;
-  onOpenPatientList: (tab?: 'Home' | 'Visits' | 'Reports' | 'Care') => void;
+  onOpenPatientList: (tab?: 'Home' | 'Visits' | 'Reports' | 'Care', autoAddMember?: boolean) => void;
+  onOpenAddMember?: () => void;
   onOpenBookVisit?: () => void;
+  onOpenBookTest?: () => void;
   onOpenPayBills?: () => void;
   onOpenVisits?: () => void;
+  onOpenReports?: () => void;
+  onOpenCare?: () => void;
   onLogout: () => void;
   onChangePin?: () => void;
 }
@@ -34,26 +40,30 @@ const getUserAvatarSource = (name?: string, customUri?: string, customAvatar?: a
   if (customUri) return { uri: customUri };
   const nameLower = (name || '').toLowerCase();
   if (nameLower.includes('rathi') || nameLower.includes('sharma') || !name) {
-    return require('../assets/images/avatar_male.png');
+    return IMAGES.avatarMale;
   }
   if (nameLower.includes('kavita')) {
-    return require('../assets/images/avatar_kavita.png');
+    return IMAGES.avatarKavita;
   }
   if (nameLower.includes('aarav')) {
-    return require('../assets/images/avatar_aarav.png');
+    return IMAGES.avatarAarav;
   }
   if (nameLower.includes('deepak')) {
-    return require('../assets/images/avatar_deepak.png');
+    return IMAGES.avatarDeepak;
   }
-  return require('../assets/images/avatar_male.png');
+  return IMAGES.avatarMale;
 };
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   userSession,
   onOpenPatientList,
+  onOpenAddMember,
   onOpenBookVisit,
+  onOpenBookTest,
   onOpenPayBills,
   onOpenVisits,
+  onOpenReports,
+  onOpenCare,
   onLogout,
   onChangePin,
 }) => {
@@ -75,6 +85,93 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     subtitle?: string;
   }>({ visible: false });
 
+  // Auto-scroll Promo Carousel State & Ref
+  const carouselRef = useRef<any>(null);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+
+  const PROMO_BANNERS = [
+    {
+      id: 'womens_wellness',
+      title: "Women's Wellness Clinic",
+      subtitle: 'Care Designed Around You • Gynecology, Maternity & Screening',
+      image: IMAGES.bannerWomensWellness,
+      onPress: () =>
+        Alert.alert(
+          "Women's Wellness Clinic",
+          'Book appointment with specialized Gynecologists & Maternity Care specialists at GMCH Hospital.'
+        ),
+    },
+    {
+      id: 'heart_campaign',
+      title: 'Heart Health Campaign',
+      subtitle: 'Listen to Your Heart Before It Whispers • Special Screening Package',
+      image: IMAGES.bannerHeartCampaign,
+      onPress: () =>
+        Alert.alert(
+          'Heart Health Campaign',
+          'Special Heart Screening Package activated! Includes ECG, Lipid Profile, BP & Cardiac Consultation.'
+        ),
+    },
+    {
+      id: 'surgical_care',
+      title: 'Advanced Surgical & Recovery Care',
+      subtitle: 'Expertise Across Every Step • Precision Surgery & Personalized Rehab',
+      image: IMAGES.bannerSurgicalCare,
+      onPress: () =>
+        Alert.alert(
+          'Advanced Surgical Unit',
+          'Consult top surgical specialists & personalized recovery rehabilitation doctors at GMCH Hospital.'
+        ),
+    },
+    {
+      id: 'trauma_emergency',
+      title: '24/7 Emergency & Trauma Care',
+      subtitle: 'Ready When Every Second Counts • Rapid Response & Life Support',
+      image: IMAGES.bannerTraumaEmergency,
+      onPress: () =>
+        Alert.alert(
+          '24/7 Emergency Services',
+          'Connecting to Hospital Emergency Trauma Desk & Ambulance Helpline (1800-209-4455 / 108).'
+        ),
+    },
+    {
+      id: 'community_camp',
+      title: 'Community Health Camp',
+      subtitle: 'Care That Reaches Everyone • Free Consultation & Health Screening',
+      image: IMAGES.bannerCommunityCamp,
+      onPress: () =>
+        Alert.alert(
+          'Community Health Camp',
+          'Free health camp registration successful! Open for all age groups at GMCH Community Grounds this Saturday.'
+        ),
+    },
+    {
+      id: 'blood_donation',
+      title: 'Mega Blood Donation Camp',
+      subtitle: 'Donate Blood, Save Lives • Free Health Checkup Included',
+      image: IMAGES.bannerBloodDonation,
+      onPress: () =>
+        Alert.alert(
+          'Blood Donation Drive',
+          'Thank you for expressing interest in donating blood! Our medical team will contact you for the drive at GMCH Auditorium.'
+        ),
+    },
+  ];
+
+  // Auto-scroll Carousel effect (scrolls every 3.6 seconds)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveBannerIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % PROMO_BANNERS.length;
+        const bannerCardWidth = isTablet ? 560 : width - 12;
+        carouselRef.current?.scrollTo({ x: nextIndex * bannerCardWidth, animated: true });
+        return nextIndex;
+      });
+    }, 3600);
+
+    return () => clearInterval(timer);
+  }, [width, isTablet, PROMO_BANNERS.length]);
+
   const openSlideBar = () => {
     setShowProfileMenu(true);
     Animated.timing(slideAnim, {
@@ -93,6 +190,19 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       setShowProfileMenu(false);
     });
   };
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showProfileMenu) {
+        closeSlideBar();
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [showProfileMenu]);
 
   const handleLogoutConfirm = () => {
     Alert.alert('Confirm Logout', 'Are you sure you want to securely log out of Patient Portal?', [
@@ -150,32 +260,34 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
           {/* App's signature healthcare leaves & waves graphic watermark */}
           <Image
-            source={require('../assets/images/leaves_wave_bg.png')}
+            source={IMAGES.leavesWaveBg}
+            fadeDuration={0}
             style={[styles.ambientWaveImage, isDark && { opacity: 0.07 }]}
             resizeMode="cover"
           />
         </View>
 
-        {/* TOP HEADER ROW: Dashboard title centered in Blue, Curvy bottom line, Notifications + Profile Cartoon Avatar */}
+        {/* TOP HEADER ROW: Subtle Border, "Good morning, <User Name>" greeting (No "Dashboard" text) */}
         <View
           style={[
             styles.headerBar,
             {
               backgroundColor: colors.surface,
-              borderBottomColor: colors.border,
+              borderBottomColor: isDark ? colors.border : '#E2E8F0',
+              borderBottomWidth: 1.5,
               paddingHorizontal: isTablet ? 24 : 16,
               paddingTop: isTablet ? 14 : 10,
               paddingBottom: isTablet ? 14 : 12,
             },
           ]}
         >
-          {/* Left placeholder to balance right buttons and keep center title perfectly centered */}
-          <View style={[styles.headerSideGroup, isTablet && { width: 104 }]} />
-
-          {/* Centered Blue Header Title: Dashboard (No secondary text) */}
-          <View style={styles.headerCenterGroup}>
-            <Text style={[styles.headerTitleCentered, isTablet && { fontSize: 24 }]}>
-              Dashboard
+          {/* Header Left / Center: "Good morning, <User Name>" */}
+          <View style={styles.headerGreetingCol}>
+            <Text style={[styles.headerGreetingTime, { color: colors.textSecondary }]}>
+              {getGreeting()} 👋
+            </Text>
+            <Text style={[styles.headerGreetingName, { color: '#0083B0' }, isTablet && { fontSize: 20 }]} numberOfLines={1}>
+              {displayName}
             </Text>
           </View>
 
@@ -207,7 +319,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               activeOpacity={0.8}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <AppIcon name="user" size={isTablet ? 23 : 20} color="#0083B0" />
+              <AppIcon name="user" size={isTablet ? 27 : 24} color="#0083B0" />
             </TouchableOpacity>
           </View>
         </View>
@@ -218,103 +330,243 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             styles.scrollContent,
             {
               paddingHorizontal: isTablet ? 24 : 16,
-              paddingTop: isTablet ? 14 : 10,
+              paddingTop: isTablet ? 14 : 12,
               paddingBottom: insets.bottom + (isTablet ? 110 : 85),
             },
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* 1. GOOD MORNING GREETING (NO BG, NO BORDER, NO DP, BIG GREETING, SMALLER NAME) */}
-          <View style={[styles.greetingSection, isTablet && { marginBottom: 16 }]}>
-            <View style={styles.greetingPillRow}>
+          {/* 1. AUTO-SCROLLING RECTANGULAR HOSPITAL BANNER CAROUSEL (100% SINGLE POSTER PER SWIPE, ZERO CROPPING) */}
+          <View style={[styles.carouselWrapper, isTablet && { marginBottom: 18 }]}>
+            {(() => {
+              const cardWidth = isTablet ? 560 : width - 12;
+              const cardHeight = isTablet ? 260 : Math.round(cardWidth * 0.54);
+              return (
+                <ScrollView
+                  ref={carouselRef}
+                  horizontal
+                  pagingEnabled
+                  snapToInterval={cardWidth}
+                  snapToAlignment="center"
+                  decelerationRate="fast"
+                  showsHorizontalScrollIndicator={false}
+                  onMomentumScrollEnd={(e) => {
+                    const newIndex = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
+                    if (newIndex >= 0 && newIndex < PROMO_BANNERS.length) {
+                      setActiveBannerIndex(newIndex);
+                    }
+                  }}
+                  style={{ width: cardWidth, alignSelf: 'center' }}
+                >
+                  {PROMO_BANNERS.map((banner) => (
+                    <TouchableOpacity
+                      key={banner.id}
+                      style={[
+                        styles.posterCard,
+                        {
+                          width: cardWidth,
+                          height: cardHeight,
+                          backgroundColor: colors.surface,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                      onPress={banner.onPress}
+                      activeOpacity={0.92}
+                    >
+                      <Image
+                        source={banner.image}
+                        fadeDuration={0}
+                        style={styles.posterImageBg}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              );
+            })()}
+
+            {/* Sleek Pagination Dots */}
+            <View style={styles.paginationRow}>
+              {PROMO_BANNERS.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.paginationDot,
+                    i === activeBannerIndex ? styles.paginationDotActive : styles.paginationDotInactive,
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* 2. SERVICES & QUICK ACCESS CARD (COMPACT HEIGHT PAYTM-STYLE CARD) */}
+          <View
+            style={[
+              styles.servicesCardContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: isDark ? colors.border : '#E2E8F0',
+              },
+              isTablet && { padding: 14, marginBottom: 14 },
+            ]}
+          >
+            {/* Card Header: Title */}
+            <View style={styles.servicesCardHeader}>
+              <Text style={[styles.servicesCardTitle, { color: colors.textPrimary }, isTablet && { fontSize: 18 }]}>
+                Services & Care
+              </Text>
             </View>
 
-            <Text style={[styles.greetingBigHeading, { color: colors.textPrimary }, isTablet && { fontSize: 28 }]}>
-              {getGreeting()},
-            </Text>
+            {/* Horizontal Scrollable Icons Row (Slim compact icons with 1-line text below) */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.servicesScrollContent}
+              style={styles.servicesScrollView}
+            >
+              {/* Item 1: Book Appointment */}
+              <TouchableOpacity
+                style={styles.serviceItem}
+                onPress={onOpenBookVisit || (() => Alert.alert('Book Appointment', 'Select doctor or department to book a new appointment.'))}
+                activeOpacity={0.75}
+              >
+                <View style={styles.serviceIconWrap}>
+                  <AppIcon name="calendar" size={isTablet ? 22 : 18} color="#0083B0" />
+                </View>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                  Book Appointment
+                </Text>
+              </TouchableOpacity>
 
-            <Text style={[styles.greetingUserNameText, { color: colors.primary }, isTablet && { fontSize: 18 }]}>
-              {displayName}
-            </Text>
+              {/* Item 2: Pay Bills */}
+              <TouchableOpacity
+                style={styles.serviceItem}
+                onPress={onOpenPayBills || (() => Alert.alert('Pay Bills', 'Viewing outstanding bills & payment options.'))}
+                activeOpacity={0.75}
+              >
+                <View style={styles.serviceIconWrap}>
+                  <AppIcon name="wallet-outline" size={isTablet ? 22 : 18} color="#0083B0" />
+                </View>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                  Pay Bills
+                </Text>
+              </TouchableOpacity>
 
-            <Text style={[styles.greetingEncouragementText, { color: colors.textSecondary }, isTablet && { fontSize: 13.5 }]}>
-              {/* Wishing you good health & vitality today */}
-            </Text>
+              {/* Item 3: Book Test */}
+              <TouchableOpacity
+                style={styles.serviceItem}
+                onPress={onOpenBookTest || (() => Alert.alert('Book Test', 'Select lab test or diagnostic package to book.'))}
+                activeOpacity={0.75}
+              >
+                <View style={styles.serviceIconWrap}>
+                  <AppIcon name="flask" size={isTablet ? 22 : 18} color="#0083B0" />
+                </View>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                  Book Test
+                </Text>
+              </TouchableOpacity>
+
+              {/* Item 4: Medicines */}
+              <TouchableOpacity
+                style={styles.serviceItem}
+                onPress={() => Alert.alert('Medicines', 'Order prescribed medicines or view active pharmacy orders.')}
+                activeOpacity={0.75}
+              >
+                <View style={styles.serviceIconWrap}>
+                  <AppIcon name="pill" size={isTablet ? 22 : 18} color="#0083B0" />
+                </View>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                  Medicines
+                </Text>
+              </TouchableOpacity>
+
+              {/* Item 5: Diet Plan */}
+              <TouchableOpacity
+                style={styles.serviceItem}
+                onPress={() => Alert.alert('Diet Plan', 'Viewing personalized nutritionist diet instructions.')}
+                activeOpacity={0.75}
+              >
+                <View style={styles.serviceIconWrap}>
+                  <AppIcon name="food-apple-outline" size={isTablet ? 22 : 18} color="#0083B0" />
+                </View>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                  Diet Plan
+                </Text>
+              </TouchableOpacity>
+
+              {/* Item 6: Add Member */}
+              <TouchableOpacity
+                style={styles.serviceItem}
+                onPress={() => {
+                  if (onOpenAddMember) onOpenAddMember();
+                  else onOpenPatientList('Home', true);
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={styles.serviceIconWrap}>
+                  <AppIcon name="usergroup-add" size={isTablet ? 22 : 18} color="#0083B0" />
+                </View>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                  Add Member
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            {/* Scroll Indicator Track Pill at bottom of Card */}
+            <View style={styles.scrollTrackContainer}>
+              <View style={styles.scrollTrackBg}>
+                <View style={[styles.scrollTrackThumb, { backgroundColor: isDark ? colors.borderLight : '#64748B' }]} />
+              </View>
+            </View>
           </View>
 
-          {/* 2. TOP QUICK ACTION ROW (4 ICONS) */}
-          <View style={[styles.quickActionsGrid, isTablet && { gap: 14, marginBottom: 20 }]}>
-            {/* Card 1: Book Visit */}
-            <TouchableOpacity
-              style={[
-                styles.actionCard,
-                { backgroundColor: isDark ? colors.surface : '#E0F2FE', borderColor: isDark ? colors.border : '#BAE6FD' },
-                isTablet && styles.actionCardTablet,
-              ]}
-              onPress={onOpenBookVisit || (() => Alert.alert('Book Visit', 'Select doctor or department to book a new appointment.'))}
-              activeOpacity={0.75}
-            >
-              <AppIcon name="calendar" size={isTablet ? 30 : 26} color="#0083B0" />
-              <Text style={[styles.actionLabel, { color: colors.textPrimary }, isTablet && { fontSize: 13.5 }]}>
-                Book Visit
+          {/* 2B. EXCLUSIVE HEALTH POINTS & REWARDS BANNER (BRIGHT SOFT CYAN CARD) */}
+          <TouchableOpacity
+            style={[
+              styles.rewardsPillBanner,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#D0EDFF',
+                borderColor: isDark ? '#38BDF8' : '#0083B0',
+              },
+              isTablet && { paddingHorizontal: 20, paddingVertical: 16, marginBottom: 18 },
+            ]}
+            onPress={() =>
+              Alert.alert(
+                `You Have ${userSession.healthPoints ?? 450} Health Points 🎉`,
+                `You currently have ${userSession.healthPoints ?? 450} Health Points (₹${userSession.healthPoints ?? 450} value) in your GMCH Patient Account!\n\nBook your next visit now to redeem your points and get up to ₹${userSession.healthPoints ?? 450} instant discount applied at checkout.`,
+                [
+                  { text: 'Book Next Visit', onPress: onOpenBookVisit },
+                  { text: 'Close', style: 'cancel' },
+                ]
+              )
+            }
+            activeOpacity={0.88}
+          >
+            <Image
+              source={IMAGES.giftBoxRewards}
+              fadeDuration={0}
+              style={styles.giftBoxIconImage}
+              resizeMode="contain"
+            />
+            <View style={styles.rewardsTextContainer}>
+              <Text style={[styles.rewardsTitle, { color: isDark ? '#F1F5F9' : '#004F6E' }, isTablet && { fontSize: 17 }]}>
+                You Have {userSession.healthPoints ?? 450} Health Points! 🎁
               </Text>
-            </TouchableOpacity>
-
-            {/* Card 2: Pay Bills */}
-            <TouchableOpacity
-              style={[
-                styles.actionCard,
-                { backgroundColor: isDark ? colors.surface : '#E0F2FE', borderColor: isDark ? colors.border : '#BAE6FD' },
-                isTablet && styles.actionCardTablet,
-              ]}
-              onPress={onOpenPayBills || (() => Alert.alert('Pay Bills', 'Viewing outstanding bills & payment options.'))}
-              activeOpacity={0.75}
-            >
-              <AppIcon name="wallet-outline" size={isTablet ? 30 : 26} color="#0083B0" />
-              <Text style={[styles.actionLabel, { color: colors.textPrimary }, isTablet && { fontSize: 13.5 }]}>
-                Pay Bills
+              <Text style={[styles.rewardsSubtitle, { color: isDark ? '#7DD3FC' : '#006B94' }, isTablet && { fontSize: 13 }]} numberOfLines={1}>
+                Book your next visit & get discount offer!
               </Text>
-            </TouchableOpacity>
-
-            {/* Card 3: Diet Plan */}
-            <TouchableOpacity
-              style={[
-                styles.actionCard,
-                { backgroundColor: isDark ? colors.surface : '#E0F2FE', borderColor: isDark ? colors.border : '#BAE6FD' },
-                isTablet && styles.actionCardTablet,
-              ]}
-              onPress={() => Alert.alert('Diet Plan', 'Viewing personalized nutritionist diet instructions.')}
-              activeOpacity={0.75}
-            >
-              <AppIcon name="food-apple-outline" size={isTablet ? 30 : 26} color="#0083B0" />
-              <Text style={[styles.actionLabel, { color: colors.textPrimary }, isTablet && { fontSize: 13.5 }]}>
-                Diet Plan
-              </Text>
-            </TouchableOpacity>
-
-            {/* Card 4: Add Member */}
-            <TouchableOpacity
-              style={[
-                styles.actionCard,
-                { backgroundColor: isDark ? colors.surface : '#E0F2FE', borderColor: isDark ? colors.border : '#BAE6FD' },
-                isTablet && styles.actionCardTablet,
-              ]}
-              onPress={() => onOpenPatientList()}
-              activeOpacity={0.75}
-            >
-              <AppIcon name="usergroup-add" size={isTablet ? 30 : 26} color="#0083B0" />
-              <Text style={[styles.actionLabel, { color: colors.textPrimary }, isTablet && { fontSize: 13.5 }]}>
-                Add Member
-              </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+            <View style={styles.rewardsChevronWrap}>
+              <AppIcon name="chevron-right" size={20} color={isDark ? '#7DD3FC' : '#0083B0'} />
+            </View>
+          </TouchableOpacity>
 
           {/* 3. OUTSTANDING BILLS CARD */}
           <View
             style={[
               styles.billsSummaryCard,
               { backgroundColor: colors.surface, borderColor: isDark ? '#7F1D1D' : '#FEE2E2' },
-              isTablet && { padding: 20, marginBottom: 18 },
+              isTablet && { padding: 18, marginBottom: 18 },
             ]}
           >
             <View style={styles.billsLeftCol}>
@@ -330,13 +582,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </View>
 
             <TouchableOpacity
-              style={[styles.payBillsButton, isTablet && { paddingHorizontal: 22, height: 46 }]}
+              style={[styles.payBillsButton, isTablet && { paddingHorizontal: 20, height: 42 }]}
               onPress={onOpenPayBills || (() => Alert.alert('Pay Bills', 'Proceeding to secure hospital gateway to clear ₹2,000.'))}
               activeOpacity={0.88}
             >
-              <Text style={[styles.payBillsText, isTablet && { fontSize: 15 }]}>Pay Bills</Text>
+              <Text style={[styles.payBillsText, isTablet && { fontSize: 14 }]}>Pay Bills</Text>
               <View style={{ marginLeft: 6 }}>
-                <AppIcon name="arrow-right" size={16} color="#FFFFFF" />
+                <AppIcon name="arrow-right" size={15} color="#FFFFFF" />
               </View>
             </TouchableOpacity>
           </View>
@@ -348,7 +600,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               { backgroundColor: colors.surface, borderColor: colors.border },
               isTablet && { padding: 18, marginBottom: 18 },
             ]}
-            onPress={() => onOpenPatientList()}
+            onPress={() => onOpenPatientList('Home', false)}
             activeOpacity={0.85}
           >
             <View>
@@ -365,7 +617,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {/* Member 1: Main Owner - Rathi Vijay Sharma */}
               <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: '#DEF0FD', zIndex: 4, marginRight: -10 }]}>
                 <Image
-                  source={require('../assets/images/avatar_male.png')}
+                  source={IMAGES.avatarMale}
+                  fadeDuration={0}
                   style={styles.stackedAvatarImg}
                   resizeMode="cover"
                 />
@@ -374,7 +627,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {/* Member 2: Wife - Kavita Chouhan */}
               <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: '#FDE1E7', zIndex: 3, marginRight: -10 }]}>
                 <Image
-                  source={require('../assets/images/avatar_kavita.png')}
+                  source={IMAGES.avatarKavita}
+                  fadeDuration={0}
                   style={styles.stackedAvatarImg}
                   resizeMode="cover"
                 />
@@ -383,7 +637,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {/* Member 3: Son - Aarav Chouhan */}
               <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: '#DEF0FD', zIndex: 2, marginRight: -10 }]}>
                 <Image
-                  source={require('../assets/images/avatar_aarav.png')}
+                  source={IMAGES.avatarAarav}
+                  fadeDuration={0}
                   style={styles.stackedAvatarImg}
                   resizeMode="cover"
                 />
@@ -392,7 +647,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {/* Member 4: Brother - Deepak Chouhan */}
               <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: '#DEF0FD', zIndex: 1 }]}>
                 <Image
-                  source={require('../assets/images/avatar_deepak.png')}
+                  source={IMAGES.avatarDeepak}
+                  fadeDuration={0}
                   style={styles.stackedAvatarImg}
                   resizeMode="cover"
                 />
@@ -423,7 +679,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <View style={styles.compactDocRow}>
               <View style={styles.compactDocAvatarBox}>
                 <Image
-                  source={require('../assets/images/avatar_doctor.png')}
+                  source={IMAGES.avatarDoctor}
+                  fadeDuration={0}
                   style={[styles.compactDocAvatar, isDark && { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
                   resizeMode="cover"
                 />
@@ -491,7 +748,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <View style={styles.compactDocRow}>
               <View style={styles.compactDocAvatarBox}>
                 <Image
-                  source={require('../assets/images/avatar_doctor_female.png')}
+                  source={IMAGES.avatarDoctorFemale}
+                  fadeDuration={0}
                   style={[styles.compactDocAvatar, isDark && { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
                   resizeMode="cover"
                 />
@@ -549,14 +807,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </View>
         </ScrollView>
 
-        {/* 5-TAB FIXED BOTTOM NAVIGATION BAR */}
+        {/* FLOATING CURVY BOTTOM NAVIGATION BAR */}
         <View
           style={[
             styles.bottomNavBar,
             {
               backgroundColor: colors.surface,
-              borderTopColor: colors.border,
-              paddingBottom: Math.max(insets.bottom, 10),
+              borderColor: isDark ? colors.border : '#E2E8F0',
+              bottom: Math.max(insets.bottom, 10),
             },
           ]}
         >
@@ -566,14 +824,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             activeOpacity={0.7}
             onPress={() => setActiveTab('Home')}
           >
-            {activeTab === 'Home' ? (
-              <View style={styles.activeIndicatorBar} />
-            ) : (
-              <View style={styles.inactiveIndicatorPlaceholder} />
-            )}
             <AppIcon
               name="home"
-              size={isTablet ? 26 : 22}
+              size={isTablet ? 24 : 20}
               color={activeTab === 'Home' ? '#0083B0' : colors.textMuted}
             />
             <Text
@@ -581,7 +834,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 styles.navLabel,
                 { color: activeTab === 'Home' ? '#0083B0' : colors.textMuted },
                 activeTab === 'Home' && styles.navLabelActive,
-                isTablet && { fontSize: 13 },
+                isTablet && { fontSize: 12.5 },
               ]}
             >
               Home
@@ -601,14 +854,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               }
             }}
           >
-            {activeTab === 'Visits' ? (
-              <View style={styles.activeIndicatorBar} />
-            ) : (
-              <View style={styles.inactiveIndicatorPlaceholder} />
-            )}
             <AppIcon
               name="calendar"
-              size={isTablet ? 26 : 22}
+              size={isTablet ? 24 : 20}
               color={activeTab === 'Visits' ? '#0083B0' : colors.textMuted}
             />
             <Text
@@ -616,7 +864,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 styles.navLabel,
                 { color: activeTab === 'Visits' ? '#0083B0' : colors.textMuted },
                 activeTab === 'Visits' && styles.navLabelActive,
-                isTablet && { fontSize: 13 },
+                isTablet && { fontSize: 12.5 },
               ]}
             >
               Visits
@@ -629,17 +877,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             activeOpacity={0.7}
             onPress={() => {
               setActiveTab('Reports');
-              if (onOpenPatientList) onOpenPatientList('Reports');
+              if (onOpenReports) {
+                onOpenReports();
+              } else if (onOpenPatientList) {
+                onOpenPatientList('Reports');
+              }
             }}
           >
-            {activeTab === 'Reports' ? (
-              <View style={styles.activeIndicatorBar} />
-            ) : (
-              <View style={styles.inactiveIndicatorPlaceholder} />
-            )}
             <AppIcon
               name="document"
-              size={isTablet ? 26 : 22}
+              size={isTablet ? 24 : 20}
               color={activeTab === 'Reports' ? '#0083B0' : colors.textMuted}
             />
             <Text
@@ -647,7 +894,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 styles.navLabel,
                 { color: activeTab === 'Reports' ? '#0083B0' : colors.textMuted },
                 activeTab === 'Reports' && styles.navLabelActive,
-                isTablet && { fontSize: 13 },
+                isTablet && { fontSize: 12.5 },
               ]}
             >
               Reports
@@ -660,17 +907,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             activeOpacity={0.7}
             onPress={() => {
               setActiveTab('Care');
-              Alert.alert('Care', 'Health programs, diet charts, and doctor chat.');
+              if (onOpenCare) onOpenCare();
             }}
           >
-            {activeTab === 'Care' ? (
-              <View style={styles.activeIndicatorBar} />
-            ) : (
-              <View style={styles.inactiveIndicatorPlaceholder} />
-            )}
             <AppIcon
               name="care"
-              size={isTablet ? 26 : 22}
+              size={isTablet ? 24 : 20}
               color={activeTab === 'Care' ? '#0083B0' : colors.textMuted}
             />
             <Text
@@ -678,7 +920,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 styles.navLabel,
                 { color: activeTab === 'Care' ? '#0083B0' : colors.textMuted },
                 activeTab === 'Care' && styles.navLabelActive,
-                isTablet && { fontSize: 13 },
+                isTablet && { fontSize: 12.5 },
               ]}
             >
               Care
@@ -816,7 +1058,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       activeOpacity={0.7}
                       onPress={() => {
                         closeSlideBar();
-                        onOpenPatientList();
+                        onOpenPatientList('Home', false);
                       }}
                     >
                       <View style={[styles.slideMenuIconBg, { backgroundColor: isDark ? colors.primaryLight : '#DEF0FD' }]}>
@@ -1079,17 +1321,21 @@ const styles = StyleSheet.create({
   headerSideGroup: {
     width: 88,
   },
-  headerCenterGroup: {
+  headerGreetingCol: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    paddingLeft: 2,
   },
-  headerTitleCentered: {
-    fontSize: 20,
+  headerGreetingTime: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: -0.1,
+  },
+  headerGreetingName: {
+    fontSize: 16.5,
     fontWeight: '800',
-    color: '#0083B0',
     letterSpacing: -0.3,
-    textAlign: 'center',
+    marginTop: 1,
   },
   headerRightGroup: {
     flexDirection: 'row',
@@ -1140,50 +1386,109 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
 
-  // 2. GREETING SECTION (CLEAN, NO BG, NO BORDER, NO DP)
-  greetingSection: {
-    paddingHorizontal: 4,
-    paddingTop: 4,
+  // 2. AUTO-SCROLLING RECTANGULAR CAROUSEL
+  carouselWrapper: {
     marginBottom: 16,
+    marginTop: 2,
   },
-  greetingPillRow: {
+  posterCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F253E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  posterImageBg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  posterOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(11, 35, 65, 0.42)',
+    padding: 14,
+    justifyContent: 'space-between',
+  },
+  posterTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'flex-start',
   },
-  greetingTimeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#DEF0FD',
+  posterBadge: {
     paddingHorizontal: 9,
     paddingVertical: 3.5,
-    borderRadius: 12,
+    borderRadius: 8,
   },
-  greetingTimeBadgeText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#0083B0',
-  },
-  greetingBigHeading: {
-    fontSize: 25,
+  posterBadgeText: {
+    fontSize: 10.5,
     fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.4,
+    letterSpacing: 0.5,
   },
-  greetingUserNameText: {
+  posterBottomCol: {
+    justifyContent: 'flex-end',
+  },
+  posterTitleText: {
     fontSize: 17,
-    fontWeight: '700',
-    color: '#0083B0',
-    marginTop: 2,
-    letterSpacing: -0.2,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  greetingEncouragementText: {
-    fontSize: 12.5,
-    color: '#64748B',
-    marginTop: 4,
+  posterSubText: {
+    fontSize: 11.5,
     fontWeight: '500',
-    lineHeight: 17,
+    color: '#F1F5F9',
+    marginTop: 3,
+    marginBottom: 8,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  posterActionBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#0083B0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  posterActionBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    gap: 6,
+  },
+  paginationDot: {
+    height: 6,
+    borderRadius: 3,
+  },
+  paginationDotActive: {
+    width: 20,
+    backgroundColor: '#0083B0',
+  },
+  paginationDotInactive: {
+    width: 6,
+    backgroundColor: '#CBD5E1',
   },
 
   // SCROLL CONTENT
@@ -1191,60 +1496,153 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
 
-  // 1. 4 TOP ACTION CARDS (MATCHING REFERENCE MOCKUP)
-  quickActionsGrid: {
+  // 2. SERVICES & QUICK ACCESS CARD (COMPACT HEIGHT PAYTM CARD CONTAINER)
+  servicesCardContainer: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingTop: 8,
+    paddingBottom: 6,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    shadowColor: '#0083B0',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  servicesCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    gap: 10,
+    marginBottom: 5,
   },
-  actionCard: {
-    flex: 1,
-    backgroundColor: '#E0F2FE',
-    borderWidth: 1.5,
-    borderColor: '#BAE6FD',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
+  servicesCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  viewAllBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 82,
+    gap: 3,
   },
-  actionCardTablet: {
-    paddingVertical: 18,
-    minHeight: 104,
-    borderRadius: 20,
-  },
-  actionLabel: {
+  viewAllText: {
     fontSize: 11.5,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#0083B0',
+  },
+  servicesScrollView: {
+    marginHorizontal: -4,
+    marginBottom: 4,
+  },
+  servicesScrollContent: {
+    paddingHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  serviceItem: {
+    width: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 2,
+  },
+  serviceIconWrap: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  serviceLabel: {
+    fontSize: 9.2,
+    fontWeight: '600',
     textAlign: 'center',
-    marginTop: 6,
+    lineHeight: 12,
+    letterSpacing: -0.2,
   },
 
-  // FIXED BOTTOM NAVIGATION BAR
+  // SCROLL INDICATOR TRACK PILL AT BOTTOM OF CARD
+  scrollTrackContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 0,
+  },
+  scrollTrackBg: {
+    width: 28,
+    height: 3.5,
+    borderRadius: 1.75,
+    backgroundColor: '#CBD5E1',
+    overflow: 'hidden',
+  },
+  scrollTrackThumb: {
+    width: 12,
+    height: 3.5,
+    borderRadius: 1.75,
+  },
+
+  // REWARDS & POINTS PILL BANNER
+  rewardsPillBanner: {
+    borderRadius: 24,
+    borderWidth: 1.5,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#0083B0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  giftBoxIconImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    marginRight: 12,
+  },
+  rewardsTextContainer: {
+    flex: 1,
+  },
+  rewardsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  rewardsSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  rewardsChevronWrap: {
+    marginLeft: 8,
+  },
+
+  // SLIM FLOATING BOTTOM NAVIGATION BAR WITH CURVY CORNERS
   bottomNavBar: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    paddingTop: 6,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 10,
-    zIndex: 10,
+    paddingVertical: 5,
+    shadowColor: '#0F253E',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 7,
+    zIndex: 100,
   },
   navTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   activeIndicatorBar: {
     width: 22,
@@ -1333,15 +1731,15 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
 
-  // OUTSTANDING BILLS CARD
+  // OUTSTANDING BILLS CARD (COMPACT HEIGHT MATCHING FAMILY SUMMARY CARD)
   billsSummaryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 18,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: '#FEE2E2',
     shadowColor: '#0F172A',
@@ -1375,27 +1773,27 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   billsAmountRed: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#E11D48',
-    marginTop: 4,
+    marginTop: 2,
   },
   payBillsButton: {
     backgroundColor: '#0083B0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
-    height: 42,
-    borderRadius: 21,
+    paddingHorizontal: 16,
+    height: 38,
+    borderRadius: 19,
     shadowColor: '#0083B0',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   payBillsText: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
     color: '#FFFFFF',
   },

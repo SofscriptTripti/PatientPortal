@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
+import IMAGES from './imageAssets';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -95,7 +96,8 @@ export default function SplashScreen({ onFinish, duration = 2500 }: SplashScreen
           ]}
         >
           <Image
-            source={require('../assets/images/patient_portal_logo.png')}
+            source={IMAGES.patientPortalLogo}
+            fadeDuration={0}
             style={[styles.logoImage, isTablet && { width: 110, height: 110 }]}
             resizeMode="contain"
           />
@@ -131,7 +133,8 @@ export default function SplashScreen({ onFinish, duration = 2500 }: SplashScreen
       {/* Bottom Wave Footer pinned to edge */}
       <View style={styles.waveFooterContainer}>
         <Image
-          source={require('../assets/images/wave_footer_bg.png')}
+          source={IMAGES.waveFooterBg}
+          fadeDuration={0}
           style={[
             styles.waveFooterImage,
             {

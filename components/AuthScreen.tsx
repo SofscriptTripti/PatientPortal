@@ -14,6 +14,7 @@ import {
   ImageBackground,
   useWindowDimensions,
   Keyboard,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
@@ -21,6 +22,7 @@ import { UserSession } from './types';
 import MobileEntryScreen from './MobileEntryScreen';
 import OtpScreen from './OtpScreen';
 import UniversalLoader from './UniversalLoader';
+import IMAGES from './imageAssets';
 
 interface AuthScreenProps {
   onLoginSuccess: (session: UserSession) => void;
@@ -124,6 +126,40 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       };
     }
   }, [showOtpModal]);
+
+  // Hardware device back press handler for active modals & multi-step login/register
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showOtpModal) {
+        setShowOtpModal(false);
+        return true;
+      }
+      if (showForgotPinModal) {
+        setShowForgotPinModal(false);
+        return true;
+      }
+      if (showChangePinModal) {
+        setShowChangePinModal(false);
+        return true;
+      }
+      if (showHelpModal) {
+        setShowHelpModal(false);
+        return true;
+      }
+      if (loginStep === 'pin') {
+        setLoginStep('mobile');
+        return true;
+      }
+      if (authMode === 'register') {
+        setAuthMode('login');
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [showOtpModal, showForgotPinModal, showChangePinModal, showHelpModal, loginStep, authMode]);
 
   // Mobile Submit -> Stay on same page, show OTP Modal
   const handleMobileSubmit = () => {
@@ -616,7 +652,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     activeOpacity={0.88}
                   >
                     <ImageBackground
-                      source={require('../assets/images/btn_gradient_bg.png')}
+                      source={IMAGES.btnGradientBg}
+                      fadeDuration={0}
                       style={styles.sendOtpGradient}
                       imageStyle={styles.sendOtpGradientImg}
                     >
@@ -638,7 +675,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
                 <View style={styles.bottomWaveContainer}>
                   <Image
-                    source={require('../assets/images/wave_footer_bg.png')}
+                    source={IMAGES.waveFooterBg}
+                    fadeDuration={0}
                     style={[styles.bottomWaveImage, isTablet && { height: 310 }]}
                     resizeMode="stretch"
                   />
@@ -796,7 +834,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               activeOpacity={0.88}
             >
               <ImageBackground
-                source={require('../assets/images/btn_gradient_bg.png')}
+                source={IMAGES.btnGradientBg}
+                fadeDuration={0}
                 style={styles.sendOtpGradient}
                 imageStyle={styles.sendOtpGradientImg}
               >
@@ -869,7 +908,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               activeOpacity={0.88}
             >
               <ImageBackground
-                source={require('../assets/images/btn_gradient_bg.png')}
+                source={IMAGES.btnGradientBg}
+                fadeDuration={0}
                 style={styles.sendOtpGradient}
                 imageStyle={styles.sendOtpGradientImg}
               >

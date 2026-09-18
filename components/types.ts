@@ -15,6 +15,11 @@ export interface PatientMember {
   genderType: 'M' | 'F';
   customAvatarUri?: string;
   dateAdded?: string;
+  dob?: string;
+  address?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  aadhaarNo?: string;
 }
 
 export interface UserSession {
@@ -23,6 +28,7 @@ export interface UserSession {
   isLoggedIn: boolean;
   customAvatarUri?: string;
   userAvatar?: any;
+  healthPoints?: number;
 }
 
 export type AuthMode = 'login' | 'register';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   useWindowDimensions,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
@@ -16,6 +17,7 @@ import { UserSession, PatientMember } from './types';
 import { INITIAL_PATIENTS } from './mockData';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
+import IMAGES from './imageAssets';
 
 export interface AppointmentItem {
   id: string;
@@ -47,8 +49,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'Cardiology',
     doctorName: 'Dr. Ananya Sharma',
     qualification: 'MBBS, MD, DM - Interventional Cardiologist',
-    doctorAvatar: require('../assets/images/avatar_doctor_female.png'),
-    patientAvatar: require('../assets/images/avatar_male.png'),
+    doctorAvatar: IMAGES.avatarDoctorFemale,
+    patientAvatar: IMAGES.avatarMale,
     dateTime: '2026-06-25 09:15 AM',
     status: 'Confirmed',
     chiefComplaint: 'Routine blood pressure & ECG check',
@@ -63,8 +65,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'General Medicine',
     doctorName: 'Dr. Chakravarthi',
     qualification: 'MBBS, MD, FRCP - Chief Consultant Physician',
-    doctorAvatar: require('../assets/images/avatar_doctor.png'),
-    patientAvatar: require('../assets/images/avatar_male.png'),
+    doctorAvatar: IMAGES.avatarDoctor,
+    patientAvatar: IMAGES.avatarMale,
     dateTime: '2026-09-12 11:00 AM',
     status: 'Appointment Requested',
     chiefComplaint: 'Annual executive health & wellness consultation',
@@ -79,8 +81,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'Orthopedics',
     doctorName: 'Dr. Rajesh Iyer',
     qualification: 'MS (Ortho), DNB - Consultant Orthopedic Surgeon',
-    doctorAvatar: require('../assets/images/avatar_doctor.png'),
-    patientAvatar: require('../assets/images/avatar_male.png'),
+    doctorAvatar: IMAGES.avatarDoctor,
+    patientAvatar: IMAGES.avatarMale,
     dateTime: '2026-04-10 03:30 PM',
     status: 'Completed',
     chiefComplaint: 'Lower back muscle soreness after workout',
@@ -95,8 +97,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'General Medicine',
     doctorName: 'Dr. Priya Nair',
     qualification: 'MBBS, MD - Senior Physician',
-    doctorAvatar: require('../assets/images/avatar_doctor_female.png'),
-    patientAvatar: require('../assets/images/avatar_male.png'),
+    doctorAvatar: IMAGES.avatarDoctorFemale,
+    patientAvatar: IMAGES.avatarMale,
     dateTime: '2026-02-18 10:00 AM',
     status: 'Completed',
     chiefComplaint: 'Seasonal viral fever recovery and blood test review',
@@ -115,8 +117,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'General Medicine',
     doctorName: 'Dr. Priya Nair',
     qualification: 'MBBS, MD - Senior Physician',
-    doctorAvatar: require('../assets/images/avatar_doctor_female.png'),
-    patientAvatar: require('../assets/images/avatar_kavita.png'),
+    doctorAvatar: IMAGES.avatarDoctorFemale,
+    patientAvatar: IMAGES.avatarKavita,
     dateTime: '2026-09-07 10:30 AM',
     status: 'Appointment Requested',
     chiefComplaint: 'Fever & Persistent Cough (3 days)',
@@ -131,8 +133,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'Gynaecology',
     doctorName: 'Dr. Sunita Rao',
     qualification: 'MBBS, MS (OBG) - Senior Gynaecologist',
-    doctorAvatar: require('../assets/images/avatar_doctor_female.png'),
-    patientAvatar: require('../assets/images/avatar_kavita.png'),
+    doctorAvatar: IMAGES.avatarDoctorFemale,
+    patientAvatar: IMAGES.avatarKavita,
     dateTime: '2026-07-22 04:30 PM',
     status: 'Confirmed',
     chiefComplaint: 'Routine antenatal wellness and iron profiling',
@@ -147,8 +149,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'Dermatology',
     doctorName: 'Dr. Meenakshi Sundaram',
     qualification: 'MD (Dermatology), DVD - Consultant Dermatologist',
-    doctorAvatar: require('../assets/images/avatar_doctor_female.png'),
-    patientAvatar: require('../assets/images/avatar_kavita.png'),
+    doctorAvatar: IMAGES.avatarDoctorFemale,
+    patientAvatar: IMAGES.avatarKavita,
     dateTime: '2026-05-18 11:15 AM',
     status: 'Completed',
     chiefComplaint: 'Skin allergic rash and contact dermatitis consultation',
@@ -163,8 +165,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'General Medicine',
     doctorName: 'Dr. Priya Nair',
     qualification: 'MBBS, MD - Senior Physician',
-    doctorAvatar: require('../assets/images/avatar_doctor_female.png'),
-    patientAvatar: require('../assets/images/avatar_kavita.png'),
+    doctorAvatar: IMAGES.avatarDoctorFemale,
+    patientAvatar: IMAGES.avatarKavita,
     dateTime: '2026-03-05 02:00 PM',
     status: 'Completed',
     chiefComplaint: 'Vitamin D3 & thyroid profiling follow-up',
@@ -183,8 +185,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'Pediatrics',
     doctorName: 'Dr. Chakravarthi PIS',
     qualification: 'MBBS, MD - Chief Pediatrician',
-    doctorAvatar: require('../assets/images/avatar_doctor.png'),
-    patientAvatar: require('../assets/images/avatar_aarav.png'),
+    doctorAvatar: IMAGES.avatarDoctor,
+    patientAvatar: IMAGES.avatarAarav,
     dateTime: '2026-06-18 11:30 AM',
     status: 'Confirmed',
     chiefComplaint: 'Seasonal cough & allergic rhinitis follow-up',
@@ -199,8 +201,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'Pediatrics',
     doctorName: 'Dr. Ananya Roy',
     qualification: 'MBBS, DNB - Child Specialist',
-    doctorAvatar: require('../assets/images/avatar_doctor_female.png'),
-    patientAvatar: require('../assets/images/avatar_aarav.png'),
+    doctorAvatar: IMAGES.avatarDoctorFemale,
+    patientAvatar: IMAGES.avatarAarav,
     dateTime: '2026-09-15 05:00 PM',
     status: 'Appointment Requested',
     chiefComplaint: 'Pediatric booster immunization and physical growth review',
@@ -215,8 +217,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'ENT',
     doctorName: 'Dr. Alok Verma',
     qualification: 'MS (ENT), DLO - Senior ENT Consultant',
-    doctorAvatar: require('../assets/images/avatar_doctor.png'),
-    patientAvatar: require('../assets/images/avatar_aarav.png'),
+    doctorAvatar: IMAGES.avatarDoctor,
+    patientAvatar: IMAGES.avatarAarav,
     dateTime: '2026-05-28 10:45 AM',
     status: 'Completed',
     chiefComplaint: 'Mild ear ache after swimming and throat review',
@@ -231,8 +233,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'Pediatrics',
     doctorName: 'Dr. Chakravarthi PIS',
     qualification: 'MBBS, MD - Chief Pediatrician',
-    doctorAvatar: require('../assets/images/avatar_doctor.png'),
-    patientAvatar: require('../assets/images/avatar_aarav.png'),
+    doctorAvatar: IMAGES.avatarDoctor,
+    patientAvatar: IMAGES.avatarAarav,
     dateTime: '2026-02-22 03:15 PM',
     status: 'Completed',
     chiefComplaint: 'Annual school health fitness certificate & vision check',
@@ -251,8 +253,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'Orthopedics',
     doctorName: 'Dr. Rajesh Iyer',
     qualification: 'MS (Ortho), DNB - Consultant Orthopedic Surgeon',
-    doctorAvatar: require('../assets/images/avatar_doctor.png'),
-    patientAvatar: require('../assets/images/avatar_deepak.png'),
+    doctorAvatar: IMAGES.avatarDoctor,
+    patientAvatar: IMAGES.avatarDeepak,
     dateTime: '2026-05-12 04:00 PM',
     status: 'Completed',
     chiefComplaint: 'Right wrist sprain & rehabilitation review',
@@ -267,8 +269,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'Orthopedics',
     doctorName: 'Dr. Rajesh Iyer',
     qualification: 'MS (Ortho), DNB - Consultant Orthopedic Surgeon',
-    doctorAvatar: require('../assets/images/avatar_doctor.png'),
-    patientAvatar: require('../assets/images/avatar_deepak.png'),
+    doctorAvatar: IMAGES.avatarDoctor,
+    patientAvatar: IMAGES.avatarDeepak,
     dateTime: '2026-09-20 09:30 AM',
     status: 'Appointment Requested',
     chiefComplaint: 'Physiotherapy progress check for wrist mobility',
@@ -283,8 +285,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'General Surgery',
     doctorName: 'Dr. Amit Bhatnagar',
     qualification: 'MBBS, MS - Senior General Surgeon',
-    doctorAvatar: require('../assets/images/avatar_doctor.png'),
-    patientAvatar: require('../assets/images/avatar_deepak.png'),
+    doctorAvatar: IMAGES.avatarDoctor,
+    patientAvatar: IMAGES.avatarDeepak,
     dateTime: '2026-07-02 02:30 PM',
     status: 'Confirmed',
     chiefComplaint: 'Abdominal ultrasound review & gastroenterology consult',
@@ -299,8 +301,8 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     department: 'General Medicine',
     doctorName: 'Dr. Priya Nair',
     qualification: 'MBBS, MD - Senior Physician',
-    doctorAvatar: require('../assets/images/avatar_doctor_female.png'),
-    patientAvatar: require('../assets/images/avatar_deepak.png'),
+    doctorAvatar: IMAGES.avatarDoctorFemale,
+    patientAvatar: IMAGES.avatarDeepak,
     dateTime: '2026-03-29 11:30 AM',
     status: 'Completed',
     chiefComplaint: 'Seasonal flu symptoms and post-recovery check',
@@ -314,6 +316,8 @@ interface VisitsScreenProps {
   onBookNewVisit: () => void;
   onOpenHome?: () => void;
   onOpenPatientList?: () => void;
+  onOpenReports?: () => void;
+  onOpenCare?: () => void;
 }
 
 export const VisitsScreen: React.FC<VisitsScreenProps> = ({
@@ -322,6 +326,8 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
   onBookNewVisit,
   onOpenHome,
   onOpenPatientList,
+  onOpenReports,
+  onOpenCare,
 }) => {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -370,15 +376,15 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
   const getMemberAvatar = (patientId: string) => {
     switch (patientId) {
       case '1':
-        return require('../assets/images/avatar_male.png');
+        return IMAGES.avatarMale;
       case '2':
-        return require('../assets/images/avatar_kavita.png');
+        return IMAGES.avatarKavita;
       case '3':
-        return require('../assets/images/avatar_aarav.png');
+        return IMAGES.avatarAarav;
       case '4':
-        return require('../assets/images/avatar_deepak.png');
+        return IMAGES.avatarDeepak;
       default:
-        return require('../assets/images/avatar_male.png');
+        return IMAGES.avatarMale;
     }
   };
 
@@ -487,6 +493,36 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
     );
   };
 
+  const handleHeaderBack = () => {
+    if (showMemberSwitchSheet) {
+      setShowMemberSwitchSheet(false);
+      return;
+    }
+    if (showRescheduleSheet) {
+      setShowRescheduleSheet(false);
+      return;
+    }
+    onBack();
+  };
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showMemberSwitchSheet) {
+        setShowMemberSwitchSheet(false);
+        return true;
+      }
+      if (showRescheduleSheet) {
+        setShowRescheduleSheet(false);
+        return true;
+      }
+      onBack();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [showMemberSwitchSheet, showRescheduleSheet, onBack]);
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
@@ -495,7 +531,8 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
           <View style={[styles.ambientTopGlow, isDark && { backgroundColor: '#1E3A5F', opacity: 0.3 }]} />
           <View style={[styles.ambientMidGlow, isDark && { backgroundColor: '#162032', opacity: 0.2 }]} />
           <Image
-            source={require('../assets/images/leaves_wave_bg.png')}
+            source={IMAGES.leavesWaveBg}
+            fadeDuration={0}
             style={[styles.ambientWaveImage, isDark && { opacity: 0.07 }]}
             resizeMode="cover"
           />
@@ -516,7 +553,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
         >
           <View style={[styles.headerSideGroup, isTablet && { width: 44 }]}>
             <TouchableOpacity
-              onPress={onBack}
+              onPress={handleHeaderBack}
               style={[styles.headerBackBtn, isTablet && { width: 42, height: 42, borderRadius: 21 }]}
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -600,7 +637,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                   onPress={onBookNewVisit}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.emptyBookBtnText}>Book Visit</Text>
+                  <Text style={styles.emptyBookBtnText}>Book Appointment</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -717,24 +754,22 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
         <TouchableOpacity
           style={[
             styles.floatingBookBtnRight,
-            { bottom: Math.max(insets.bottom, 10) + 88 },
+            { bottom: Math.max(insets.bottom, 10) + 72 },
           ]}
           onPress={onBookNewVisit}
           activeOpacity={0.88}
         >
-          <Text style={styles.floatingBookBtnRightText}>Book New Visit</Text>
+          <Text style={styles.floatingBookBtnRightText}>Book New Appointment</Text>
         </TouchableOpacity>
 
-        {/* ========================================================
-            4. FIXED BOTTOM NAVIGATION BAR (Visits Active)
-           ======================================================== */}
+        {/* FLOATING CURVY BOTTOM NAVIGATION BAR */}
         <View
           style={[
             styles.bottomNavBar,
             {
               backgroundColor: colors.surface,
-              borderTopColor: colors.border,
-              paddingBottom: Math.max(insets.bottom, 10),
+              borderColor: isDark ? colors.border : '#E2E8F0',
+              bottom: Math.max(insets.bottom, 10),
             },
           ]}
         >
@@ -747,9 +782,8 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
               else onBack();
             }}
           >
-            <View style={styles.inactiveIndicatorPlaceholder} />
-            <AppIcon name="home" size={isTablet ? 26 : 22} color={colors.textMuted} />
-            <Text style={[styles.navLabel, { color: colors.textMuted }, isTablet && { fontSize: 13 }]}>
+            <AppIcon name="home" size={isTablet ? 24 : 20} color={colors.textMuted} />
+            <Text style={[styles.navLabel, { color: colors.textMuted }, isTablet && { fontSize: 12.5 }]}>
               Home
             </Text>
           </TouchableOpacity>
@@ -758,11 +792,10 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.8}
-            onPress={() => setShowMemberSwitchSheet(true)}
+            onPress={() => {}}
           >
-            <View style={styles.activeIndicatorBar} />
-            <AppIcon name="calendar" size={isTablet ? 26 : 22} color="#0083B0" />
-            <Text style={[styles.navLabel, { color: '#0083B0' }, styles.navLabelActive, isTablet && { fontSize: 13 }]}>
+            <AppIcon name="calendar" size={isTablet ? 24 : 20} color="#0083B0" />
+            <Text style={[styles.navLabel, { color: '#0083B0' }, styles.navLabelActive, isTablet && { fontSize: 12.5 }]}>
               Visits
             </Text>
           </TouchableOpacity>
@@ -772,13 +805,13 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
             style={styles.navTab}
             activeOpacity={0.7}
             onPress={() => {
-              if (onOpenPatientList) onOpenPatientList();
+              if (onOpenReports) onOpenReports();
+              else if (onOpenPatientList) onOpenPatientList();
               else onBack();
             }}
           >
-            <View style={styles.inactiveIndicatorPlaceholder} />
-            <AppIcon name="document" size={isTablet ? 26 : 22} color={colors.textMuted} />
-            <Text style={[styles.navLabel, { color: colors.textMuted }, isTablet && { fontSize: 13 }]}>
+            <AppIcon name="document" size={isTablet ? 24 : 20} color={colors.textMuted} />
+            <Text style={[styles.navLabel, { color: colors.textMuted }, isTablet && { fontSize: 12.5 }]}>
               Reports
             </Text>
           </TouchableOpacity>
@@ -787,11 +820,12 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.7}
-            onPress={() => Alert.alert('Patient Care', 'Hospital 24/7 Helpline: 1800-123-4567')}
+            onPress={() => {
+              if (onOpenCare) onOpenCare();
+            }}
           >
-            <View style={styles.inactiveIndicatorPlaceholder} />
-            <AppIcon name="care" size={isTablet ? 26 : 22} color={colors.textMuted} />
-            <Text style={[styles.navLabel, { color: colors.textMuted }, isTablet && { fontSize: 13 }]}>
+            <AppIcon name="care" size={isTablet ? 24 : 20} color={colors.textMuted} />
+            <Text style={[styles.navLabel, { color: colors.textMuted }, isTablet && { fontSize: 12.5 }]}>
               Care
             </Text>
           </TouchableOpacity>
@@ -1513,26 +1547,30 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // 4. BOTTOM NAVIGATION BAR
+  // SLIM FLOATING BOTTOM NAVIGATION BAR WITH CURVY CORNERS
   bottomNavBar: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    paddingTop: 6,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 10,
-    zIndex: 10,
+    paddingVertical: 5,
+    shadowColor: '#0F253E',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 7,
+    zIndex: 100,
   },
   navTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   activeIndicatorBar: {
     width: 22,

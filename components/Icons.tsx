@@ -55,8 +55,23 @@ export type IconType =
   | 'card'
   | 'clock'
   | 'sun'
+  | 'weather-sunset'
+  | 'weather-sunny'
+  | 'weather-night'
+  | 'moon'
   | 'star'
-  | 'alert-circle';
+  | 'alert-circle'
+  | 'flask'
+  | 'pill'
+  | 'chevron-up'
+  | 'medkit'
+  | 'pulse'
+  | 'sparkles'
+  | 'camera'
+  | 'image'
+  | 'gift'
+  | 'plus'
+  | 'minus';
 
 interface IconProps {
   name: IconType;
@@ -73,9 +88,8 @@ export const AppIcon: React.FC<IconProps> = ({
 }) => {
   switch (name) {
     case 'user':
-      return <Ionicons name="person" size={size} color={color} style={style} />;
     case 'user-outline':
-      return <MaterialCommunityIcons name="account-outline" size={size} color={color} style={style} />;
+      return <MaterialIcons name="person-outline" size={size} color={color} style={style} />;
     case 'user-check':
       return <MaterialCommunityIcons name="account-check" size={size} color={color} style={style} />;
     case 'user-plus':
@@ -165,11 +179,39 @@ export const AppIcon: React.FC<IconProps> = ({
     case 'clock':
       return <Ionicons name="time-outline" size={size} color={color} style={style} />;
     case 'sun':
-      return <Ionicons name="sunny-outline" size={size} color={color} style={style} />;
+    case 'weather-sunny':
+      return <MaterialCommunityIcons name="weather-sunny" size={size} color={color} style={style} />;
+    case 'weather-sunset':
+      return <MaterialCommunityIcons name="weather-sunset-up" size={size} color={color} style={style} />;
+    case 'weather-night':
+    case 'moon':
+      return <MaterialCommunityIcons name="weather-night" size={size} color={color} style={style} />;
     case 'star':
       return <Ionicons name="star" size={size} color={color} style={style} />;
     case 'alert-circle':
       return <Ionicons name="alert-circle" size={size} color={color} style={style} />;
+    case 'flask':
+      return <MaterialCommunityIcons name="flask-outline" size={size} color={color} style={style} />;
+    case 'pill':
+      return <MaterialCommunityIcons name="pill" size={size} color={color} style={style} />;
+    case 'chevron-up':
+      return <Ionicons name="chevron-up" size={size} color={color} style={style} />;
+    case 'medkit':
+      return <Ionicons name="medkit-outline" size={size} color={color} style={style} />;
+    case 'pulse':
+      return <Ionicons name="pulse" size={size} color={color} style={style} />;
+    case 'sparkles':
+      return <MaterialCommunityIcons name="sparkles" size={size} color={color} style={style} />;
+    case 'camera':
+      return <Ionicons name="camera" size={size} color={color} style={style} />;
+    case 'image':
+      return <Ionicons name="image" size={size} color={color} style={style} />;
+    case 'gift':
+      return <MaterialCommunityIcons name="gift-outline" size={size} color={color} style={style} />;
+    case 'plus':
+      return <Ionicons name="add" size={size} color={color} style={style} />;
+    case 'minus':
+      return <Ionicons name="remove" size={size} color={color} style={style} />;
     default:
       return <Ionicons name="ellipse" size={size} color={color} style={style} />;
   }

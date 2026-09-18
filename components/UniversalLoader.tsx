@@ -8,6 +8,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import IMAGES from './imageAssets';
 
 export interface UniversalLoaderProps {
   visible?: boolean;
@@ -130,7 +131,8 @@ export const UniversalLoader: React.FC<UniversalLoaderProps> = ({
           ]}
         >
           <Image
-            source={require('../assets/images/patient_portal_logo.png')}
+            source={IMAGES.patientPortalLogo}
+            fadeDuration={0}
             style={styles.logoImg}
             resizeMode="contain"
           />

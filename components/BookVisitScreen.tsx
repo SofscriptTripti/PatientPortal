@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   useWindowDimensions,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
@@ -16,6 +17,7 @@ import { PatientMember, UserSession } from './types';
 import { INITIAL_PATIENTS } from './mockData';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
+import IMAGES from './imageAssets';
 
 interface BookVisitScreenProps {
   userSession: UserSession;
@@ -43,7 +45,15 @@ const DEPARTMENTS: Department[] = [
   { id: '8', name: 'ENT', sub: 'Ear, Nose & Throat', icon: 'bullhorn', doctorCount: 2 },
 ];
 
-// 3 Doctors with different details
+// 3 Doctors with complete bio & patient reviews
+interface PatientReview {
+  id: string;
+  patientName: string;
+  rating: number;
+  date: string;
+  comment: string;
+}
+
 interface DoctorItem {
   id: string;
   name: string;
@@ -55,6 +65,9 @@ interface DoctorItem {
   fee: number;
   experience: string;
   avatar: any;
+  about: string;
+  languages: string[];
+  reviews: PatientReview[];
 }
 
 const DOCTORS_LIST: DoctorItem[] = [
@@ -62,66 +75,165 @@ const DOCTORS_LIST: DoctorItem[] = [
     id: 'doc-1',
     name: 'Dr. Priya Nair',
     specialty: 'Senior Pediatrician',
-    qualifications: 'MBBS, MD',
+    qualifications: 'MBBS, MD (Pediatrics)',
     unit: 'Unit 1 · 09:00 AM – 12:00 PM',
     rating: '4.9',
     reviewsCount: 356,
     fee: 500,
     experience: '12 Yrs Exp',
-    avatar: require('../assets/images/avatar_doctor_female.png'),
+    avatar: IMAGES.avatarDoctorFemale,
+    about: 'Dr. Priya Nair is a highly acclaimed Senior Pediatrician specializing in child immunizations, newborn care, developmental assessment, and pediatric infectious conditions. She has over 12 years of experience in top-tier pediatric hospitals.',
+    languages: ['English', 'Hindi', 'Malayalam'],
+    reviews: [
+      {
+        id: 'rev-1',
+        patientName: 'Sunita Verma',
+        rating: 5,
+        date: '12 Sep 2026',
+        comment: 'Dr. Priya is wonderful with children! My 3-year-old son was very comfortable during the examination. Highly recommended!',
+      },
+      {
+        id: 'rev-2',
+        patientName: 'Rajesh Kumar',
+        rating: 5,
+        date: '08 Sep 2026',
+        comment: 'Very patient listener. She diagnosed my daughter\'s fever accurately and gave detailed dosage instructions.',
+      },
+      {
+        id: 'rev-3',
+        patientName: 'Ananya Sharma',
+        rating: 4.5,
+        date: '01 Sep 2026',
+        comment: 'Great pediatrician! Minimal waiting time and very supportive medical staff.',
+      },
+    ],
   },
   {
     id: 'doc-2',
     name: 'Dr. Chakravarthi',
     specialty: 'Chief Consultant Physician',
-    qualifications: 'MBBS, MD, FRCP',
+    qualifications: 'MBBS, MD, FRCP (London)',
     unit: 'Unit 2 · 10:00 AM – 02:00 PM',
     rating: '4.8',
     reviewsCount: 412,
     fee: 600,
     experience: '16 Yrs Exp',
-    avatar: require('../assets/images/avatar_doctor.png'),
+    avatar: IMAGES.avatarDoctor,
+    about: 'Dr. Chakravarthi is a Chief Consultant Physician with over 16 years of extensive clinical practice in internal medicine, metabolic disorders, hypertension, and preventive health screenings.',
+    languages: ['English', 'Hindi', 'Telugu'],
+    reviews: [
+      {
+        id: 'rev-4',
+        patientName: 'Vikram Malhotra',
+        rating: 5,
+        date: '14 Sep 2026',
+        comment: 'Dr. Chakravarthi diagnosed my chronic condition accurately after 2 years of struggle elsewhere. Highly compassionate doctor.',
+      },
+      {
+        id: 'rev-5',
+        patientName: 'Meenakshi Sundaram',
+        rating: 5,
+        date: '10 Sep 2026',
+        comment: 'Extremely polite and thorough in examination. Explained all lab reports clearly.',
+      },
+    ],
   },
   {
     id: 'doc-3',
     name: 'Dr. Ananya Roy',
     specialty: 'Associate Child Specialist',
-    qualifications: 'MBBS, DNB',
+    qualifications: 'MBBS, DNB (Pediatrics)',
     unit: 'Unit 3 · 02:00 PM – 05:00 PM',
     rating: '4.9',
     reviewsCount: 289,
     fee: 500,
     experience: '9 Yrs Exp',
-    avatar: require('../assets/images/avatar_doctor_female.png'),
+    avatar: IMAGES.avatarDoctorFemale,
+    about: 'Dr. Ananya Roy specializes in infant nutrition, pediatric allergy management, and adolescent growth counseling with 9 years of dedicated clinical experience.',
+    languages: ['English', 'Hindi', 'Bengali'],
+    reviews: [
+      {
+        id: 'rev-6',
+        patientName: 'Pooja Hegde',
+        rating: 5,
+        date: '15 Sep 2026',
+        comment: 'Very gentle with infants and explained vaccination timelines clearly. Loved the clinic atmosphere.',
+      },
+      {
+        id: 'rev-7',
+        patientName: 'Amitabh Sen',
+        rating: 4.5,
+        date: '05 Sep 2026',
+        comment: 'Thorough consultation and friendly advice. Satisfied with the care provided.',
+      },
+    ],
   },
 ];
 
-// Available dates with day, date, month, and badge
+// Available dates - dynamically computed 7 days Sun to Sat
 interface DateOption {
   dateStr: string;
   dayName: string;
   dayNum: string;
   month: string;
+  fullDate: Date;
   badge?: string;
 }
 
-const AVAILABLE_DATES: DateOption[] = [
-  { dateStr: '07-09-2026', dayName: 'Mon', dayNum: '07', month: 'Sep', badge: 'Today' },
-  { dateStr: '08-09-2026', dayName: 'Tue', dayNum: '08', month: 'Sep' },
-  { dateStr: '09-09-2026', dayName: 'Wed', dayNum: '09', month: 'Sep' },
-  { dateStr: '10-09-2026', dayName: 'Thu', dayNum: '10', month: 'Sep' },
-  { dateStr: '11-09-2026', dayName: 'Fri', dayNum: '11', month: 'Sep' },
-  { dateStr: '12-09-2026', dayName: 'Sat', dayNum: '12', month: 'Sep' },
-  { dateStr: '14-09-2026', dayName: 'Mon', dayNum: '14', month: 'Sep' },
+const formatDateStr = (d: Date): string => {
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+};
+
+const getWeekDays = (refDate: Date = new Date(2026, 8, 17)): DateOption[] => {
+  const current = new Date(refDate);
+  const dayOfWeek = current.getDay(); // 0 = Sunday, 1 = Monday, ... 6 = Saturday
+  const sunday = new Date(current);
+  sunday.setDate(current.getDate() - dayOfWeek);
+
+  const days: DateOption[] = [];
+  const todayStr = '17-09-2026';
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sunday);
+    d.setDate(sunday.getDate() + i);
+
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const dateStr = `${dd}-${mm}-${yyyy}`;
+
+    days.push({
+      dateStr,
+      dayName: dayNames[i],
+      dayNum: dd,
+      month: monthNames[d.getMonth()],
+      fullDate: d,
+      badge: dateStr === todayStr ? 'Today' : undefined,
+    });
+  }
+
+  return days;
+};
+
+// Time slots split into Morning, Afternoon, Evening
+const MORNING_SLOTS = [
+  '09:00 AM', '09:20 AM', '09:40 AM', '10:00 AM',
+  '10:20 AM', '10:40 AM', '11:00 AM', '11:20 AM', '11:40 AM',
 ];
 
-// Available time slots matching reference image (18 slots)
-const TIME_SLOTS = [
-  '09:00 AM', '09:10 AM', '09:20 AM', '09:30 AM',
-  '09:40 AM', '09:50 AM', '10:00 AM', '10:10 AM',
-  '10:20 AM', '10:30 AM', '10:40 AM', '10:50 AM',
-  '11:00 AM', '11:10 AM', '11:20 AM', '11:30 AM',
-  '11:40 AM', '11:50 AM',
+const AFTERNOON_SLOTS = [
+  '12:00 PM', '12:20 PM', '12:40 PM', '01:00 PM',
+  '01:20 PM', '01:40 PM', '02:00 PM', '02:30 PM', '03:00 PM',
+];
+
+const EVENING_SLOTS = [
+  '04:00 PM', '04:30 PM', '05:00 PM', '05:30 PM',
+  '06:00 PM', '06:30 PM', '07:00 PM', '07:30 PM',
 ];
 
 export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
@@ -137,19 +249,32 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
   // Active step: 1 = Patient, 2 = Department, 3 = Doctor & Slot, 4 = Payment & Dues
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
+  // Reference date for 1-week Sunday to Saturday generation (defaults to 17 Sep 2026)
+  const [refDate, setRefDate] = useState<Date>(new Date(2026, 8, 17));
+  const weekDays = getWeekDays(refDate);
+
   // Selection state (pre-selected by default to Self - Rathi Vijay Sharma)
   const [selectedPatientId, setSelectedPatientId] = useState<string>('1'); // Self (Rathi Vijay Sharma)
   const [selectedDeptId, setSelectedDeptId] = useState<string>('4'); // Pediatrics
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>('doc-1'); // Dr. Priya Nair
-  const [selectedDate, setSelectedDate] = useState<string>('07-09-2026');
-  const [selectedDay, setSelectedDay] = useState<string>('Mon');
-  const [selectedSlot, setSelectedSlot] = useState<string>('10:30 AM');
+  const [selectedDate, setSelectedDate] = useState<string>('17-09-2026');
+  const [selectedDay, setSelectedDay] = useState<string>('Thu');
+  const [selectedSlot, setSelectedSlot] = useState<string>('10:20 AM');
   const [duesDismissed, setDuesDismissed] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<'pay_now' | 'pay_later'>('pay_later');
 
+  // Calendar Modal state
+  const [showCalendarModal, setShowCalendarModal] = useState<boolean>(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date(2026, 8, 1));
+  const [showMonthYearPicker, setShowMonthYearPicker] = useState<boolean>(false);
+
+  // Doctor Detail Bottom Sheet Modal state
+  const [showDoctorModal, setShowDoctorModal] = useState<boolean>(false);
+  const [activeModalDoctor, setActiveModalDoctor] = useState<DoctorItem | null>(null);
+
   // Confirmation modal & Loader
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
-  const [generatedToken, setGeneratedToken] = useState<string>('TK-2026-0907-042');
+  const [generatedToken, setGeneratedToken] = useState<string>('TK-2026-0917-042');
   const [loaderState, setLoaderState] = useState<{
     visible: boolean;
     message?: string;
@@ -174,27 +299,67 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
       relLower === 'self' ||
       relLower === 'you'
     ) {
-      return require('../assets/images/avatar_male.png');
+      return IMAGES.avatarMale;
     }
     if (nameLower.includes('kavita')) {
-      return require('../assets/images/avatar_kavita.png');
+      return IMAGES.avatarKavita;
     }
     if (nameLower.includes('aarav')) {
-      return require('../assets/images/avatar_aarav.png');
+      return IMAGES.avatarAarav;
     }
     if (nameLower.includes('deepak')) {
-      return require('../assets/images/avatar_deepak.png');
+      return IMAGES.avatarDeepak;
     }
-    return require('../assets/images/avatar_kavita.png');
+    return IMAGES.avatarKavita;
   };
 
   const handleStepBack = () => {
+    if (showDoctorModal) {
+      setShowDoctorModal(false);
+      return;
+    }
+    if (showCalendarModal) {
+      setShowCalendarModal(false);
+      return;
+    }
     if (currentStep > 1) {
       setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3 | 4);
     } else {
       onBack();
     }
   };
+
+  // Hardware device back button handling for multi-step workflow & active modals
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showDoctorModal) {
+        setShowDoctorModal(false);
+        return true;
+      }
+      if (showCalendarModal) {
+        setShowCalendarModal(false);
+        return true;
+      }
+      if (showSuccessModal) {
+        setShowSuccessModal(false);
+        if (onBookingSuccess) {
+          onBookingSuccess();
+        } else {
+          onBack();
+        }
+        return true;
+      }
+      if (currentStep > 1) {
+        setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3 | 4);
+        return true;
+      }
+      onBack();
+      return true;
+    };
+
+    const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backSubscription.remove();
+  }, [showDoctorModal, showCalendarModal, showSuccessModal, currentStep, onBack, onBookingSuccess]);
 
   const handleConfirmBooking = () => {
     setLoaderState({
@@ -218,7 +383,8 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
           <View style={[styles.ambientTopGlow, { backgroundColor: colors.primaryLight, opacity: isDark ? 0.25 : 0.65 }]} />
           <View style={[styles.ambientMidGlow, { backgroundColor: colors.primaryLight, opacity: isDark ? 0.15 : 0.45 }]} />
           <Image
-            source={require('../assets/images/leaves_wave_bg.png')}
+            source={IMAGES.leavesWaveBg}
+            fadeDuration={0}
             style={[styles.ambientWaveImage, { opacity: isDark ? 0.07 : 0.2 }]}
             resizeMode="cover"
           />
@@ -249,10 +415,10 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Centered Blue Header Title: Book Visit (No secondary text) */}
+          {/* Centered Blue Header Title: Book Appointment (No secondary text) */}
           <View style={styles.headerCenterGroup}>
             <Text style={[styles.headerTitleCentered, isTablet && { fontSize: 24 }]}>
-              Book Visit
+              Book Appointment
             </Text>
           </View>
 
@@ -488,19 +654,19 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
           )}
 
           {/* ========================================================
-              STEP 3: SELECT DOCTOR & SLOT (REFERENCE IMAGE 1)
+              STEP 3: SELECT DOCTOR & SLOT
              ======================================================== */}
           {currentStep === 3 && (
             <View>
-              {/* Reference Image 1: SLOT Header */}
+              {/* SLOT Header */}
               <View style={styles.slotHeaderRow}>
-                <Text style={[styles.slotHeadingText, { color: colors.textSecondary }]}>SLOT</Text>
+                <Text style={[styles.slotHeadingText, { color: colors.textSecondary }]}>SLOT SELECTION</Text>
                 <Text style={[styles.slotSubHeadingText, { color: colors.textSecondary }]}>
-                  Department: <Text style={{ fontWeight: '700', color: isDark ? colors.accent : '#0083B0' }}>{selectedDept.name}</Text>
+                  Dept: <Text style={{ fontWeight: '700', color: isDark ? colors.accent : '#0083B0' }}>{selectedDept.name}</Text>
                 </Text>
               </View>
 
-              {/* 1. SECTION: CHOOSE DOCTOR (3 Available) */}
+              {/* 1. SECTION: CHOOSE DOCTOR */}
               <View style={styles.sectionHeaderRow}>
                 <Text style={[styles.sectionTitleText, { color: colors.textPrimary }]}>Select Doctor</Text>
                 <Text style={[styles.sectionBadgeText, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE', color: isDark ? colors.accent : '#0083B0' }]}>3 Available</Text>
@@ -520,9 +686,14 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                         },
                         isDoctorSelected && (isDark ? { borderColor: '#38BDF8', backgroundColor: '#1E3A5F' } : styles.doctorSelectCardActive),
                       ]}
-                      onPress={() => setSelectedDoctorId(doctor.id)}
-                      activeOpacity={0.82}
+                      onPress={() => {
+                        setSelectedDoctorId(doctor.id);
+                        setActiveModalDoctor(doctor);
+                        setShowDoctorModal(true);
+                      }}
+                      activeOpacity={0.88}
                     >
+                      {/* Doctor Avatar - Clickable with Info Badge */}
                       <View style={[styles.doctorAvatarBox, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE' }]}>
                         <Image
                           source={doctor.avatar}
@@ -532,19 +703,27 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                         <View style={styles.doctorVerifiedBadge}>
                           <AppIcon name="check" size={8} color="#FFFFFF" />
                         </View>
+                        <View style={styles.doctorInfoCornerBadge}>
+                          <AppIcon name="info" size={9} color="#FFFFFF" />
+                        </View>
                       </View>
 
                       <View style={styles.doctorDetailsCol}>
                         <View style={styles.doctorNameRatingRow}>
-                          <Text
-                            style={[
-                              styles.doctorNameText,
-                              { color: colors.textPrimary },
-                              isDoctorSelected && (isDark ? { color: '#38BDF8' } : styles.doctorNameTextActive),
-                            ]}
-                          >
-                            {doctor.name}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Text
+                              style={[
+                                styles.doctorNameText,
+                                { color: colors.textPrimary },
+                                isDoctorSelected && (isDark ? { color: '#38BDF8' } : styles.doctorNameTextActive),
+                              ]}
+                            >
+                              {doctor.name}
+                            </Text>
+                            <AppIcon name="info" size={13} color={isDark ? colors.accent : '#0083B0'} />
+                          </View>
+
+                          {/* Rating Pill */}
                           <View style={styles.doctorRatingPill}>
                             <AppIcon name="star" size={11} color="#EAB308" />
                             <Text style={[styles.doctorRatingText, { color: colors.textPrimary }]}>{doctor.rating}</Text>
@@ -578,6 +757,20 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                           <View style={[styles.doctorExpBadge, { backgroundColor: colors.surfaceVariant }]}>
                             <Text style={[styles.doctorExpText, { color: colors.textSecondary }]}>{doctor.experience}</Text>
                           </View>
+
+                          {/* Prominent View Profile & Reviews Button */}
+                          <TouchableOpacity
+                            style={[styles.viewProfileBtn, { backgroundColor: isDark ? '#1E293B' : '#E0F2FE', borderColor: isDark ? '#38BDF8' : '#BAE6FD', borderWidth: 1 }]}
+                            onPress={() => {
+                              setSelectedDoctorId(doctor.id);
+                              setActiveModalDoctor(doctor);
+                              setShowDoctorModal(true);
+                            }}
+                            activeOpacity={0.75}
+                          >
+                            <AppIcon name="info" size={11} color={isDark ? '#38BDF8' : '#0083B0'} />
+                            <Text style={[styles.viewProfileBtnText, { color: isDark ? '#38BDF8' : '#0083B0' }]}>View Details & Reviews ›</Text>
+                          </TouchableOpacity>
                         </View>
                       </View>
 
@@ -597,133 +790,284 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
               </View>
 
               {/* 2. SECTION: SELECT DATE */}
-              <View style={[styles.sectionHeaderRow, { marginTop: 10 }]}>
+              <View style={[styles.sectionHeaderRow, { marginTop: 12 }]}>
                 <Text style={[styles.sectionTitleText, { color: colors.textPrimary }]}>Select Date</Text>
-                <Text style={[styles.sectionBadgeText, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE', color: isDark ? colors.accent : '#0083B0' }]}>{selectedDate}</Text>
               </View>
 
-              {/* Horizontal Scrollable Date Picker Strip */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.dateStripScrollContent}
-              >
-                {AVAILABLE_DATES.map((item) => {
-                  const isDateSelected = selectedDate === item.dateStr;
-                  return (
-                    <TouchableOpacity
-                      key={item.dateStr}
-                      style={[
-                        styles.dateStripPill,
-                        { backgroundColor: colors.surface, borderColor: colors.border },
-                        isDateSelected && styles.dateStripPillActive,
-                      ]}
-                      onPress={() => {
-                        setSelectedDate(item.dateStr);
-                        setSelectedDay(item.dayName);
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      {item.badge && (
-                        <View
-                          style={[
-                            styles.dateTodayBadge,
-                            isDateSelected && styles.dateTodayBadgeActive,
-                          ]}
-                        >
-                          <Text
+              {/* One Week Strip with > Next Week Arrow on right & blurred past dates */}
+              <View style={styles.dateStripRowWithArrow}>
+                {/* Back Arrow if viewing a future week */}
+                {(() => {
+                  const todayRef = new Date(2026, 8, 17);
+                  todayRef.setHours(0, 0, 0, 0);
+                  const firstDayOfWeek = new Date(weekDays[0].fullDate);
+                  firstDayOfWeek.setHours(0, 0, 0, 0);
+
+                  const isFutureWeek = firstDayOfWeek.getTime() > new Date(2026, 8, 13).getTime();
+
+                  if (isFutureWeek) {
+                    return (
+                      <TouchableOpacity
+                        style={[styles.stripNavArrowBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                        onPress={() => {
+                          const prev = new Date(refDate);
+                          prev.setDate(prev.getDate() - 7);
+                          setRefDate(prev);
+                        }}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[styles.stripNavArrowText, { color: isDark ? colors.accent : '#0083B0' }]}>‹</Text>
+                      </TouchableOpacity>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* 7 Days Sunday to Saturday */}
+                <View style={styles.weekStripGridContainer}>
+                  {weekDays.map((item) => {
+                    const todayRef = new Date(2026, 8, 17);
+                    todayRef.setHours(0, 0, 0, 0);
+                    const itemDate = new Date(item.fullDate);
+                    itemDate.setHours(0, 0, 0, 0);
+                    const isPast = itemDate.getTime() < todayRef.getTime();
+
+                    const isDateSelected = selectedDate === item.dateStr;
+
+                    return (
+                      <TouchableOpacity
+                        key={item.dateStr}
+                        disabled={isPast}
+                        style={[
+                          styles.dateStripPill,
+                          { backgroundColor: colors.surface, borderColor: colors.border },
+                          isDateSelected && styles.dateStripPillActive,
+                          isPast && styles.dateStripPillDisabled,
+                        ]}
+                        onPress={() => {
+                          if (!isPast) {
+                            setSelectedDate(item.dateStr);
+                            setSelectedDay(item.dayName);
+                          }
+                        }}
+                        activeOpacity={isPast ? 1 : 0.8}
+                      >
+                        {item.badge && !isPast && (
+                          <View
                             style={[
-                              styles.dateTodayText,
-                              isDateSelected && styles.dateTodayTextActive,
+                              styles.dateTodayBadge,
+                              isDateSelected && styles.dateTodayBadgeActive,
                             ]}
                           >
-                            {item.badge}
-                          </Text>
-                        </View>
-                      )}
-                      <Text
-                        style={[
-                          styles.dateStripDayName,
-                          { color: colors.textSecondary },
-                          isDateSelected && styles.dateStripTextActive,
-                        ]}
-                      >
-                        {item.dayName.toUpperCase()}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.dateStripDayNum,
-                          { color: colors.textPrimary },
-                          isDateSelected && styles.dateStripTextActive,
-                        ]}
-                      >
-                        {item.dayNum}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.dateStripMonth,
-                          { color: colors.textSecondary },
-                          isDateSelected && styles.dateStripTextActive,
-                        ]}
-                      >
-                        {item.month}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+                            <Text
+                              style={[
+                                styles.dateTodayText,
+                                isDateSelected && styles.dateTodayTextActive,
+                              ]}
+                            >
+                              {item.badge}
+                            </Text>
+                          </View>
+                        )}
 
-              {/* Date Input Display Card (from Reference Image 1) */}
-              <View style={[styles.datePickerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.datePickerText, { color: colors.textPrimary }]}>{selectedDate}</Text>
-                <AppIcon name="calendar" size={20} color={isDark ? colors.accent : '#0083B0'} />
+                        {isPast && (
+                          <View style={styles.datePastBadge}>
+                            <Text style={styles.datePastBadgeText}>Off</Text>
+                          </View>
+                        )}
+
+                        <Text
+                          style={[
+                            styles.dateStripDayName,
+                            { color: colors.textSecondary },
+                            isDateSelected && styles.dateStripTextActive,
+                            isPast && styles.dateStripTextDisabled,
+                          ]}
+                        >
+                          {item.dayName.toUpperCase()}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.dateStripDayNum,
+                            { color: colors.textPrimary },
+                            isDateSelected && styles.dateStripTextActive,
+                            isPast && styles.dateStripTextDisabled,
+                          ]}
+                        >
+                          {item.dayNum}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.dateStripMonth,
+                            { color: colors.textSecondary },
+                            isDateSelected && styles.dateStripTextActive,
+                            isPast && styles.dateStripTextDisabled,
+                          ]}
+                        >
+                          {item.month}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Next Week > Arrow Button right on the date selection strip */}
+                <TouchableOpacity
+                  style={[styles.stripNavArrowBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => {
+                    const next = new Date(refDate);
+                    next.setDate(next.getDate() + 7);
+                    setRefDate(next);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.stripNavArrowText, { color: isDark ? colors.accent : '#0083B0' }]}>›</Text>
+                </TouchableOpacity>
               </View>
 
-              {/* Day Label (from Reference Image 1) */}
-              <Text style={[styles.dayLabelText, { color: colors.textSecondary }]}>Day: {selectedDay}</Text>
+              {/* Working Interactive Calendar Display Card */}
+              <TouchableOpacity
+                style={[styles.datePickerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => {
+                  const parts = selectedDate.split('-');
+                  if (parts.length === 3) {
+                    setCalendarMonth(new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, 1));
+                  }
+                  setShowCalendarModal(true);
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.datePickerText, { color: colors.textPrimary }]}>{selectedDate} ({selectedDay})</Text>
+                </View>
+                <View style={[styles.calendarIconCircle, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE' }]}>
+                  <AppIcon name="calendar" size={18} color={isDark ? colors.accent : '#0083B0'} />
+                </View>
+              </TouchableOpacity>
 
-              {/* 3. SECTION: SELECT TIME SLOT */}
-              <View style={[styles.sectionHeaderRow, { marginTop: 6 }]}>
-                <Text style={[styles.sectionTitleText, { color: colors.textPrimary }]}>Select Slot</Text>
-                <Text style={[styles.sectionBadgeText, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE', color: isDark ? colors.accent : '#0083B0' }]}>{selectedSlot}</Text>
+              {/* 3. SECTION: SELECT TIME SLOT CATEGORIZED (MORNING, AFTERNOON, EVENING) */}
+              <View style={[styles.sectionHeaderRow, { marginTop: 14 }]}>
+                <Text style={[styles.sectionTitleText, { color: colors.textPrimary }]}>Select Time Slot</Text>
+                <Text style={[styles.sectionBadgeText, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE', color: isDark ? colors.accent : '#0083B0' }]}>
+                  Selected: {selectedSlot}
+                </Text>
               </View>
 
-              {/* 18 Time Slots Grid (from Reference Image 1) */}
-              <View style={styles.slotsGridContainer}>
-                {TIME_SLOTS.map((slotTime) => {
-                  const isSlotSelected = selectedSlot === slotTime;
-                  return (
-                    <TouchableOpacity
-                      key={slotTime}
-                      style={[
-                        styles.slotPill,
-                        { backgroundColor: colors.surface, borderColor: colors.border },
-                        isSlotSelected && styles.slotPillSelected,
-                      ]}
-                      onPress={() => setSelectedSlot(slotTime)}
-                      activeOpacity={0.75}
-                    >
-                      <Text
+              {/* CATEGORY 1: MORNING SLOTS */}
+              <View style={styles.slotCategoryBlock}>
+                <View style={styles.slotCategoryHeaderRow}>
+                  <AppIcon name="weather-sunset" size={20} color="#D97706" />
+                  <Text style={[styles.slotCategoryTitle, { color: colors.textPrimary }]}>Morning Slots</Text>
+                  <Text style={[styles.slotCategorySubText, { color: colors.textSecondary }]}>09:00 AM – 11:40 AM</Text>
+                </View>
+                <View style={styles.slotsGridContainer}>
+                  {MORNING_SLOTS.map((slotTime) => {
+                    const isSlotSelected = selectedSlot === slotTime;
+                    return (
+                      <TouchableOpacity
+                        key={slotTime}
                         style={[
-                          styles.slotPillText,
-                          { color: colors.textSecondary },
-                          isSlotSelected && styles.slotPillTextSelected,
+                          styles.slotPill,
+                          { backgroundColor: colors.surface, borderColor: colors.border },
+                          isSlotSelected && styles.slotPillSelected,
                         ]}
+                        onPress={() => setSelectedSlot(slotTime)}
+                        activeOpacity={0.75}
                       >
-                        {slotTime}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        <Text
+                          style={[
+                            styles.slotPillText,
+                            { color: colors.textSecondary },
+                            isSlotSelected && styles.slotPillTextSelected,
+                          ]}
+                        >
+                          {slotTime}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
 
-              {/* Bottom Continue Button (from Reference Image 1) */}
+              {/* CATEGORY 2: AFTERNOON SLOTS */}
+              <View style={styles.slotCategoryBlock}>
+                <View style={styles.slotCategoryHeaderRow}>
+                  <AppIcon name="weather-sunny" size={20} color="#EA580C" />
+                  <Text style={[styles.slotCategoryTitle, { color: colors.textPrimary }]}>Afternoon Slots</Text>
+                  <Text style={[styles.slotCategorySubText, { color: colors.textSecondary }]}>12:00 PM – 03:00 PM</Text>
+                </View>
+                <View style={styles.slotsGridContainer}>
+                  {AFTERNOON_SLOTS.map((slotTime) => {
+                    const isSlotSelected = selectedSlot === slotTime;
+                    return (
+                      <TouchableOpacity
+                        key={slotTime}
+                        style={[
+                          styles.slotPill,
+                          { backgroundColor: colors.surface, borderColor: colors.border },
+                          isSlotSelected && styles.slotPillSelected,
+                        ]}
+                        onPress={() => setSelectedSlot(slotTime)}
+                        activeOpacity={0.75}
+                      >
+                        <Text
+                          style={[
+                            styles.slotPillText,
+                            { color: colors.textSecondary },
+                            isSlotSelected && styles.slotPillTextSelected,
+                          ]}
+                        >
+                          {slotTime}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* CATEGORY 3: EVENING SLOTS */}
+              <View style={styles.slotCategoryBlock}>
+                <View style={styles.slotCategoryHeaderRow}>
+                  <AppIcon name="weather-night" size={20} color="#4F46E5" />
+                  <Text style={[styles.slotCategoryTitle, { color: colors.textPrimary }]}>Evening Slots</Text>
+                  <Text style={[styles.slotCategorySubText, { color: colors.textSecondary }]}>04:00 PM – 07:30 PM</Text>
+                </View>
+                <View style={styles.slotsGridContainer}>
+                  {EVENING_SLOTS.map((slotTime) => {
+                    const isSlotSelected = selectedSlot === slotTime;
+                    return (
+                      <TouchableOpacity
+                        key={slotTime}
+                        style={[
+                          styles.slotPill,
+                          { backgroundColor: colors.surface, borderColor: colors.border },
+                          isSlotSelected && styles.slotPillSelected,
+                        ]}
+                        onPress={() => setSelectedSlot(slotTime)}
+                        activeOpacity={0.75}
+                      >
+                        <Text
+                          style={[
+                            styles.slotPillText,
+                            { color: colors.textSecondary },
+                            isSlotSelected && styles.slotPillTextSelected,
+                          ]}
+                        >
+                          {slotTime}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Bottom Continue Button */}
               <TouchableOpacity
                 style={styles.continueButton}
                 onPress={() => setCurrentStep(4)}
                 activeOpacity={0.88}
               >
-                <Text style={styles.continueButtonText}>Continue</Text>
+                <Text style={styles.continueButtonText}>Continue to Payment</Text>
                 <AppIcon name="arrow-right" size={18} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
@@ -984,6 +1328,379 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
               >
                 <Text style={styles.successDoneBtnText}>Back to Dashboard</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ========================================================
+            SLIDE-UP BOTTOM SHEET: DOCTOR PROFILE & REVIEWS MODAL
+           ======================================================== */}
+        <Modal
+          visible={showDoctorModal && activeModalDoctor !== null}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowDoctorModal(false)}
+        >
+          <View style={styles.bottomSheetOverlay}>
+            <TouchableOpacity
+              style={styles.modalBackdropTap}
+              activeOpacity={1}
+              onPress={() => setShowDoctorModal(false)}
+            />
+
+            {activeModalDoctor && (
+              <View
+                style={[
+                  styles.doctorBottomSheetCard,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    borderTopWidth: 1,
+                  },
+                ]}
+              >
+                {/* Drag handle */}
+                <View style={[styles.dragHandleBar, { backgroundColor: colors.border }]} />
+
+                {/* Sheet Header */}
+                <View style={styles.bottomSheetHeaderRow}>
+                  <Text style={[styles.bottomSheetTitleText, { color: colors.textPrimary }]}>
+                    Doctor Profile & Reviews
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.closeModalBtn, { backgroundColor: colors.surfaceVariant }]}
+                    onPress={() => setShowDoctorModal(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textSecondary }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: height * 0.72 }}>
+                  {/* Doctor Profile Banner */}
+                  <View style={[styles.doctorModalHero, { backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF', borderColor: isDark ? colors.border : '#BAE6FD' }]}>
+                    <View style={styles.doctorModalAvatarBox}>
+                      <Image source={activeModalDoctor.avatar} style={styles.doctorModalAvatarImg} resizeMode="cover" />
+                      <View style={styles.doctorVerifiedBadgeLarge}>
+                        <AppIcon name="check" size={10} color="#FFFFFF" />
+                      </View>
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.doctorModalName, { color: colors.textPrimary }]}>{activeModalDoctor.name}</Text>
+                      <Text style={[styles.doctorModalSpec, { color: isDark ? colors.accent : '#0083B0' }]}>
+                        {activeModalDoctor.specialty}
+                      </Text>
+                      <Text style={[styles.doctorModalQual, { color: colors.textSecondary }]}>
+                        {activeModalDoctor.qualifications}
+                      </Text>
+                      <Text style={[styles.doctorModalUnit, { color: colors.textSecondary }]}>
+                        📍 {activeModalDoctor.unit}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* 4 Stats Grid */}
+                  <View style={styles.doctorStatsGrid}>
+                    <View style={[styles.doctorStatCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <AppIcon name="star" size={14} color="#EAB308" />
+                        <Text style={[styles.doctorStatVal, { color: colors.textPrimary }]}>{activeModalDoctor.rating}</Text>
+                      </View>
+                      <Text style={[styles.doctorStatLabel, { color: colors.textSecondary }]}>Rating</Text>
+                    </View>
+
+                    <View style={[styles.doctorStatCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <Text style={[styles.doctorStatVal, { color: colors.textPrimary }]}>{activeModalDoctor.reviewsCount}</Text>
+                      <Text style={[styles.doctorStatLabel, { color: colors.textSecondary }]}>Reviews</Text>
+                    </View>
+
+                    <View style={[styles.doctorStatCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <Text style={[styles.doctorStatVal, { color: isDark ? colors.accent : '#0083B0' }]}>₹{activeModalDoctor.fee}</Text>
+                      <Text style={[styles.doctorStatLabel, { color: colors.textSecondary }]}>Fee</Text>
+                    </View>
+
+                    <View style={[styles.doctorStatCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <Text style={[styles.doctorStatVal, { color: colors.textPrimary }]}>{activeModalDoctor.experience.split(' ')[0]}</Text>
+                      <Text style={[styles.doctorStatLabel, { color: colors.textSecondary }]}>Years Exp</Text>
+                    </View>
+                  </View>
+
+                  {/* About Section */}
+                  <View style={styles.modalSectionBox}>
+                    <Text style={[styles.modalSectionTitle, { color: colors.textPrimary }]}>About Doctor</Text>
+                    <Text style={[styles.modalAboutText, { color: colors.textSecondary }]}>{activeModalDoctor.about}</Text>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}>
+                      <Text style={[styles.langLabel, { color: colors.textSecondary }]}>Languages:</Text>
+                      {activeModalDoctor.languages.map((lang) => (
+                        <View key={lang} style={[styles.langBadge, { backgroundColor: colors.surfaceVariant }]}>
+                          <Text style={[styles.langBadgeText, { color: colors.textPrimary }]}>{lang}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Patient Reviews Section */}
+                  <View style={styles.modalSectionBox}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <Text style={[styles.modalSectionTitle, { color: colors.textPrimary }]}>Patient Reviews & Comments</Text>
+                      <Text style={[styles.reviewBadgeText, { color: isDark ? colors.accent : '#0083B0' }]}>
+                        {activeModalDoctor.reviews.length} Verified Reviews
+                      </Text>
+                    </View>
+
+                    {activeModalDoctor.reviews.map((rev) => (
+                      <View key={rev.id} style={[styles.reviewItemCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <View style={styles.reviewItemHeader}>
+                          <View style={styles.reviewerAvatar}>
+                            <Text style={styles.reviewerAvatarText}>{rev.patientName.charAt(0)}</Text>
+                          </View>
+
+                          <View style={{ flex: 1, marginLeft: 10 }}>
+                            <Text style={[styles.reviewerName, { color: colors.textPrimary }]}>{rev.patientName}</Text>
+                            <Text style={[styles.reviewDate, { color: colors.textSecondary }]}>{rev.date}</Text>
+                          </View>
+
+                          <View style={styles.reviewStarsRow}>
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <AppIcon
+                                key={s}
+                                name="star"
+                                size={11}
+                                color={s <= rev.rating ? '#EAB308' : '#CBD5E1'}
+                              />
+                            ))}
+                          </View>
+                        </View>
+
+                        <Text style={[styles.reviewCommentText, { color: colors.textSecondary }]}>{rev.comment}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+
+                {/* Bottom Select Action */}
+                <TouchableOpacity
+                  style={styles.modalSelectDoctorBtn}
+                  onPress={() => {
+                    setSelectedDoctorId(activeModalDoctor.id);
+                    setShowDoctorModal(false);
+                  }}
+                  activeOpacity={0.88}
+                >
+                  <Text style={styles.modalSelectDoctorBtnText}>
+                    Select {activeModalDoctor.name} & Continue
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </Modal>
+
+        {/* ========================================================
+            WORKING INTERACTIVE CALENDAR MODAL
+           ======================================================== */}
+        <Modal
+          visible={showCalendarModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowCalendarModal(false)}
+        >
+          <View style={styles.calendarModalOverlay}>
+            <TouchableOpacity
+              style={styles.modalBackdropTap}
+              activeOpacity={1}
+              onPress={() => setShowCalendarModal(false)}
+            />
+
+            <View style={[styles.calendarModalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {/* Modal Top Bar: Title & Top-Right Cross Close Icon */}
+              <View style={styles.calendarModalTopBar}>
+                <Text style={[styles.calendarModalTitleText, { color: colors.textPrimary }]}>Select Date</Text>
+                <TouchableOpacity
+                  style={[styles.closeCalTopBtn, { backgroundColor: colors.surfaceVariant }]}
+                  onPress={() => setShowCalendarModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <AppIcon name="close" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Calendar Header with Month & Year Direct Selector */}
+              <View style={styles.calendarHeaderRow}>
+                <TouchableOpacity
+                  style={[styles.calNavBtn, { backgroundColor: colors.surfaceVariant }]}
+                  onPress={() => {
+                    const prev = new Date(calendarMonth);
+                    prev.setMonth(prev.getMonth() - 1);
+                    setCalendarMonth(prev);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? colors.accent : '#0083B0' }}>‹</Text>
+                </TouchableOpacity>
+
+                {/* Clickable Month & Year Title - opens quick picker */}
+                <TouchableOpacity
+                  style={[styles.monthYearClickableBtn, { backgroundColor: isDark ? colors.surfaceVariant : '#DEF0FD' }]}
+                  onPress={() => setShowMonthYearPicker(!showMonthYearPicker)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.calendarMonthTitle, { color: isDark ? colors.accent : '#0083B0' }]}>
+                    {calendarMonth.toLocaleString('default', { month: 'long' })} {calendarMonth.getFullYear()} ▾
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.calNavBtn, { backgroundColor: colors.surfaceVariant }]}
+                  onPress={() => {
+                    const next = new Date(calendarMonth);
+                    next.setMonth(next.getMonth() + 1);
+                    setCalendarMonth(next);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? colors.accent : '#0083B0' }}>›</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Month & Year Direct Picker Overlay Box */}
+              {showMonthYearPicker && (
+                <View style={[styles.monthYearPickerBox, { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC', borderColor: colors.border }]}>
+                  <Text style={[styles.pickerSectionHeader, { color: colors.textSecondary }]}>Select Year:</Text>
+                  <View style={styles.yearsRowContainer}>
+                    {[2026, 2027, 2028, 2029, 2030].map((yr) => {
+                      const isSelectedYr = calendarMonth.getFullYear() === yr;
+                      return (
+                        <TouchableOpacity
+                          key={yr}
+                          style={[
+                            styles.yearPill,
+                            { backgroundColor: colors.surface, borderColor: colors.border },
+                            isSelectedYr && { backgroundColor: '#0083B0', borderColor: '#0083B0' },
+                          ]}
+                          onPress={() => {
+                            const updated = new Date(calendarMonth);
+                            updated.setFullYear(yr);
+                            setCalendarMonth(updated);
+                          }}
+                        >
+                          <Text style={[styles.yearPillText, { color: colors.textPrimary }, isSelectedYr && { color: '#FFFFFF', fontWeight: '800' }]}>
+                            {yr}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={[styles.pickerSectionHeader, { color: colors.textSecondary, marginTop: 10 }]}>Select Month:</Text>
+                  <View style={styles.monthsGridContainer}>
+                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((mName, mIdx) => {
+                      const isSelectedM = calendarMonth.getMonth() === mIdx;
+                      return (
+                        <TouchableOpacity
+                          key={mName}
+                          style={[
+                            styles.monthPill,
+                            { backgroundColor: colors.surface, borderColor: colors.border },
+                            isSelectedM && { backgroundColor: '#0083B0', borderColor: '#0083B0' },
+                          ]}
+                          onPress={() => {
+                            const updated = new Date(calendarMonth);
+                            updated.setMonth(mIdx);
+                            setCalendarMonth(updated);
+                            setShowMonthYearPicker(false);
+                          }}
+                        >
+                          <Text style={[styles.monthPillText, { color: colors.textPrimary }, isSelectedM && { color: '#FFFFFF', fontWeight: '800' }]}>
+                            {mName}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* Day Name Headers */}
+              <View style={styles.calendarDaysHeaderRow}>
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                  <Text key={day} style={[styles.calendarDayHeaderCell, { color: colors.textSecondary }]}>
+                    {day}
+                  </Text>
+                ))}
+              </View>
+
+              {/* Calendar Days Grid */}
+              <View style={styles.calendarGrid}>
+                {(() => {
+                  const year = calendarMonth.getFullYear();
+                  const month = calendarMonth.getMonth();
+                  const firstDayIndex = new Date(year, month, 1).getDay();
+                  const totalDays = new Date(year, month + 1, 0).getDate();
+
+                  const cells = [];
+                  // Empty offset cells
+                  for (let i = 0; i < firstDayIndex; i++) {
+                    cells.push(<View key={`empty-${i}`} style={styles.calendarDayCellEmpty} />);
+                  }
+
+                  // Day cells
+                  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+                  for (let d = 1; d <= totalDays; d++) {
+                    const todayRef = new Date(2026, 8, 17);
+                    todayRef.setHours(0, 0, 0, 0);
+                    const dateObj = new Date(year, month, d);
+                    dateObj.setHours(0, 0, 0, 0);
+                    const isPast = dateObj.getTime() < todayRef.getTime();
+
+                    const dd = String(d).padStart(2, '0');
+                    const mm = String(month + 1).padStart(2, '0');
+                    const dateStr = `${dd}-${mm}-${year}`;
+                    const isSelected = selectedDate === dateStr;
+                    const isToday = dateStr === '17-09-2026';
+
+                    cells.push(
+                      <TouchableOpacity
+                        key={`day-${d}`}
+                        disabled={isPast}
+                        style={[
+                          styles.calendarDayCell,
+                          { backgroundColor: colors.surfaceVariant },
+                          isSelected && styles.calendarDayCellSelected,
+                          isToday && !isSelected && styles.calendarDayCellToday,
+                          isPast && { opacity: 0.35, backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9' },
+                        ]}
+                        onPress={() => {
+                          if (!isPast) {
+                            setSelectedDate(dateStr);
+                            setSelectedDay(dayNames[dateObj.getDay()]);
+                            setRefDate(dateObj); // Updates 1-week Sunday to Saturday strip!
+                            setShowCalendarModal(false);
+                          }
+                        }}
+                        activeOpacity={isPast ? 1 : 0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.calendarDayText,
+                            { color: colors.textPrimary },
+                            isSelected && styles.calendarDayTextSelected,
+                            isToday && !isSelected && { color: isDark ? colors.accent : '#0083B0', fontWeight: '800' },
+                            isPast && { color: isDark ? '#64748B' : '#94A3B8' },
+                          ]}
+                        >
+                          {d}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }
+                  return cells;
+                })()}
+              </View>
             </View>
           </View>
         </Modal>
@@ -1438,6 +2155,19 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
   },
+  doctorInfoCornerBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#0083B0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
   doctorDetailsCol: {
     flex: 1,
   },
@@ -1523,8 +2253,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   dateStripPill: {
-    width: 62,
-    paddingVertical: 10,
+    flex: 1,
+    minWidth: 40,
+    paddingVertical: 9,
+    paddingHorizontal: 2,
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
@@ -1978,6 +2710,465 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+
+  // 1-WEEK STRIP STYLES
+  dateStripRowWithArrow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+    marginVertical: 8,
+  },
+  weekStripGridContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+  },
+  stripNavArrowBtn: {
+    width: 32,
+    height: 54,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stripNavArrowText: {
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  dateStripPillDisabled: {
+    opacity: 0.38,
+  },
+  datePastBadge: {
+    position: 'absolute',
+    top: -6,
+    backgroundColor: '#94A3B8',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  datePastBadgeText: {
+    fontSize: 7.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  dateStripTextDisabled: {
+    opacity: 0.6,
+  },
+  weekNavBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekRangeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  viewProfileBtn: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 'auto',
+  },
+  viewProfileBtnText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  calendarIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // SLOT CATEGORY STYLES
+  slotCategoryBlock: {
+    marginBottom: 12,
+  },
+  slotCategoryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  slotCategoryHeaderIcon: {
+    fontSize: 14,
+  },
+  slotCategoryTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  slotCategorySubText: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginLeft: 'auto',
+  },
+
+  // DOCTOR BOTTOM SHEET MODAL STYLES
+  bottomSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalBackdropTap: {
+    flex: 1,
+  },
+  doctorBottomSheetCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  dragHandleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginBottom: 10,
+  },
+  bottomSheetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  bottomSheetTitleText: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  closeModalBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doctorModalHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginBottom: 14,
+    gap: 14,
+  },
+  doctorModalAvatarBox: {
+    position: 'relative',
+  },
+  doctorModalAvatarImg: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
+  doctorVerifiedBadgeLarge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  doctorModalName: {
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  doctorModalSpec: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  doctorModalQual: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  doctorModalUnit: {
+    fontSize: 11.5,
+    marginTop: 3,
+    fontWeight: '500',
+  },
+  doctorStatsGrid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  doctorStatCard: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doctorStatVal: {
+    fontSize: 14.5,
+    fontWeight: '800',
+  },
+  doctorStatLabel: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  modalSectionBox: {
+    marginBottom: 14,
+  },
+  modalSectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  modalAboutText: {
+    fontSize: 12.5,
+    lineHeight: 18,
+  },
+  langLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  langBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  langBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  reviewBadgeText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  reviewItemCard: {
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  reviewItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  reviewerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#0083B0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewerAvatarText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  reviewerName: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  reviewDate: {
+    fontSize: 10.5,
+  },
+  reviewStarsRow: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  reviewCommentText: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  modalSelectDoctorBtn: {
+    backgroundColor: '#0083B0',
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  modalSelectDoctorBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+
+  // CALENDAR MODAL STYLES
+  calendarModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  calendarModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  calendarHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  calendarModalTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  calendarModalTitleText: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  closeCalTopBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calNavBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarMonthTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  calendarDaysHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  calendarDayHeaderCell: {
+    width: '14%',
+    textAlign: 'center',
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 14,
+  },
+  calendarDayCellEmpty: {
+    width: '14%',
+    height: 40,
+  },
+  calendarDayCell: {
+    width: '14%',
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 2,
+  },
+  calendarDayCellSelected: {
+    backgroundColor: '#0083B0',
+  },
+  calendarDayCellToday: {
+    borderWidth: 1.5,
+    borderColor: '#0083B0',
+  },
+  calendarDayText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  calendarDayTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  monthYearClickableBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  monthYearPickerBox: {
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  pickerSectionHeader: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  yearsRowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+  },
+  yearPill: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  yearPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  monthsGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  monthPill: {
+    width: '23%',
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  closeCalBtn: {
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

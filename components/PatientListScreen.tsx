@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   Switch,
   Animated,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
@@ -19,14 +20,19 @@ import { PatientMember, UserSession } from './types';
 import { INITIAL_PATIENTS } from './mockData';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
+import IMAGES from './imageAssets';
 
 interface PatientListScreenProps {
   userSession: UserSession;
   initialTab?: 'Home' | 'Visits' | 'Reports' | 'Care';
+  autoOpenAddMember?: boolean;
+  onOpenAddMember?: () => void;
   onLogout: () => void;
   onChangePin: () => void;
   onBack?: () => void;
   onOpenVisits?: () => void;
+  onOpenReports?: () => void;
+  onOpenCare?: () => void;
 }
 
 // Avatar mapping: Exact cartoon avatars matching reference mockup
@@ -42,20 +48,20 @@ const getAvatarSource = (patient: PatientMember) => {
     relLower === 'self' ||
     relLower === 'you'
   ) {
-    return require('../assets/images/avatar_male.png');
+    return IMAGES.avatarMale;
   }
   if (nameLower.includes('kavita')) {
-    return require('../assets/images/avatar_kavita.png');
+    return IMAGES.avatarKavita;
   }
   if (nameLower.includes('aarav')) {
-    return require('../assets/images/avatar_aarav.png');
+    return IMAGES.avatarAarav;
   }
   if (nameLower.includes('deepak')) {
-    return require('../assets/images/avatar_deepak.png');
+    return IMAGES.avatarDeepak;
   }
   return patient.genderType === 'F'
-    ? require('../assets/images/avatar_kavita.png')
-    : require('../assets/images/avatar_male.png');
+    ? IMAGES.avatarKavita
+    : IMAGES.avatarMale;
 };
 
 // Pastel circle background for each avatar
@@ -68,27 +74,32 @@ const getAvatarBg = (patient: PatientMember) => {
 
 export const PatientListScreen: React.FC<PatientListScreenProps> = ({
   userSession,
-  initialTab = 'Reports',
+  initialTab = 'Home',
+  autoOpenAddMember = false,
+  onOpenAddMember,
   onLogout,
   onChangePin,
   onBack,
   onOpenVisits,
+  onOpenReports,
+  onOpenCare,
 }) => {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 600 || height >= 950;
 
   // Dynamic responsive dimensions according to device width & height
-  const avatarSize = isTablet ? 76 : 64;
-  const cardMinHeight = isTablet ? Math.min(Math.round(height * 0.11), 140) : 88;
-  const nameFontSize = isTablet ? 18 : 16;
+  const isSmallMobile = width < 380;
+  const avatarSize = isTablet ? 76 : (isSmallMobile ? 56 : 62);
+  const cardMinHeight = isTablet ? Math.min(Math.round(height * 0.11), 140) : 84;
+  const nameFontSize = isTablet ? 18 : (isSmallMobile ? 14.5 : 15.5);
   const tagFontSize = isTablet ? 11 : 10;
-  const chevronSize = isTablet ? 34 : 28;
-  const chevronIconSize = isTablet ? 18 : 15;
-  const labelFontSize = isTablet ? 12.5 : 11;
-  const valueFontSize = isTablet ? 14 : 12.5;
-  const dividerHeight = isTablet ? 28 : 22;
-  const dividerMargin = isTablet ? 10 : 6;
+  const chevronSize = isTablet ? 34 : (isSmallMobile ? 26 : 28);
+  const chevronIconSize = isTablet ? 18 : (isSmallMobile ? 14 : 15);
+  const labelFontSize = isTablet ? 12.5 : (isSmallMobile ? 10 : 10.5);
+  const valueFontSize = isTablet ? 14 : (isSmallMobile ? 11.5 : 12);
+  const dividerHeight = isTablet ? 28 : (isSmallMobile ? 18 : 20);
+  const dividerMargin = isTablet ? 10 : (isSmallMobile ? 4 : 5);
 
   // Family members list - all 4 registered members
   const [patients, setPatients] = useState<PatientMember[]>(INITIAL_PATIENTS);
@@ -104,7 +115,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
 
   const userAvatarSource = mainMember
     ? (userSession.userAvatar || (userSession.customAvatarUri ? { uri: userSession.customAvatarUri } : getAvatarSource(mainMember)))
-    : require('../assets/images/avatar_male.png');
+    : IMAGES.avatarMale;
 
   const [activeTab, setActiveTab] = useState<'Home' | 'Visits' | 'Reports' | 'Care'>(initialTab);
 
@@ -124,10 +135,10 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
   // Modals state
   const [selectedPatient, setSelectedPatient] = useState<PatientMember | null>(null);
   const [showContactModal, setShowContactModal] = useState(false);
-  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState<boolean>(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMemberSelectModal, setShowMemberSelectModal] = useState(false);
-  const [actionType, setActionType] = useState<'Book Visit' | 'Pay Bills' | 'Diet' | null>(null);
+  const [actionType, setActionType] = useState<'Book Appointment' | 'Pay Bills' | 'Diet' | null>(null);
 
   // Profile Slide Bar & Settings State
   const { theme, setTheme, isDark, colors } = useTheme();
@@ -161,9 +172,9 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
   const [newMobile, setNewMobile] = useState(userSession.mobileNumber || '73737377376');
   const [newPatientNo, setNewPatientNo] = useState('');
 
-  // Quick Action Handler: Book Visit (Opens Member Select Modal)
+  // Quick Action Handler: Book Appointment (Opens Member Select Modal)
   const handleQuickBookVisit = () => {
-    setActionType('Book Visit');
+    setActionType('Book Appointment');
     setShowMemberSelectModal(true);
   };
 
@@ -184,7 +195,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
     setShowMemberSelectModal(false);
     const currentAction = actionType;
 
-    if (currentAction === 'Book Visit') {
+    if (currentAction === 'Book Appointment') {
       setLoaderState({
         visible: true,
         message: 'Loading Doctor Schedule...',
@@ -193,7 +204,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
       setTimeout(() => {
         setLoaderState({ visible: false });
         Alert.alert(
-          'Book Visit',
+          'Book Appointment',
           `Ready to book an appointment for ${patient.name} (Patient No: ${patient.patientNumber}).`
         );
       }, 600);
@@ -304,7 +315,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
     });
     setTimeout(() => {
       setLoaderState({ visible: false });
-      Alert.alert('Book Visit', `Ready to book an appointment for ${patient.name} (Patient No: ${patient.patientNumber}).`);
+      Alert.alert('Book Appointment', `Ready to book an appointment for ${patient.name} (Patient No: ${patient.patientNumber}).`);
     }, 600);
   };
 
@@ -366,7 +377,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
         {/* Right: Info Section */}
         <View style={styles.cardRightContent}>
           {/* Top Row: Name + Relation Pill + Chevron Arrow */}
-          <View style={[styles.cardTopRow, { marginBottom: isTablet ? 12 : 10 }]}>
+          <View style={[styles.cardTopRow, { marginBottom: isTablet ? 12 : 8 }]}>
             <View style={styles.nameAndTagGroup}>
               <Text style={[styles.cardPatientName, { color: colors.textPrimary, fontSize: nameFontSize }]} numberOfLines={1}>
                 {item.name}
@@ -376,10 +387,12 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
                 style={[
                   styles.relationTextOnly,
                   {
-                    fontSize: isTablet ? 13.5 : 12,
-                    marginLeft: isTablet ? 8 : 6,
+                    fontSize: isTablet ? 13 : (isSmallMobile ? 10 : 11),
+                    marginLeft: isTablet ? 6 : 4,
                   },
                 ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
               >
                 {item.relation.toLowerCase() === 'self' || item.relation.toLowerCase() === 'you'
                   ? '( SELF · MAIN OWNER )'
@@ -451,6 +464,55 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
   // User initial for top avatar
   const userInitial = (userSession.name && userSession.name.trim().charAt(0).toUpperCase()) || 'D';
 
+  const handleHeaderBack = () => {
+    if (showContactModal) {
+      setShowContactModal(false);
+      return;
+    }
+    if (showAddMemberModal) {
+      setShowAddMemberModal(false);
+      return;
+    }
+    if (showMemberSelectModal) {
+      setShowMemberSelectModal(false);
+      return;
+    }
+    if (showProfileMenu) {
+      closeSlideBar();
+      return;
+    }
+    if (onBack) onBack();
+  };
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showContactModal) {
+        setShowContactModal(false);
+        return true;
+      }
+      if (showAddMemberModal) {
+        setShowAddMemberModal(false);
+        return true;
+      }
+      if (showMemberSelectModal) {
+        setShowMemberSelectModal(false);
+        return true;
+      }
+      if (showProfileMenu) {
+        closeSlideBar();
+        return true;
+      }
+      if (onBack) {
+        onBack();
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [showContactModal, showAddMemberModal, showMemberSelectModal, showProfileMenu, onBack]);
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
@@ -464,7 +526,8 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
 
           {/* App's signature healthcare leaves & waves graphic watermark */}
           <Image
-            source={require('../assets/images/leaves_wave_bg.png')}
+            source={IMAGES.leavesWaveBg}
+            fadeDuration={0}
             style={[styles.ambientWaveImage, isDark && { opacity: 0.07 }]}
             resizeMode="cover"
           />
@@ -486,7 +549,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
           <View style={[styles.headerSideGroup, isTablet && { width: 44 }]}>
             {onBack ? (
               <TouchableOpacity
-                onPress={onBack}
+                onPress={handleHeaderBack}
                 style={[styles.headerBackBtn, isTablet && { width: 42, height: 42, borderRadius: 21 }]}
                 activeOpacity={0.7}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -526,6 +589,9 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
                 marginTop: isTablet ? 10 : 6,
                 marginBottom: isTablet ? 14 : 10,
                 paddingHorizontal: isTablet ? 4 : 2,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
               },
             ]}
           >
@@ -545,15 +611,32 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
           ))}
         </ScrollView>
 
-        {/* 5. FIXED FLOATING BOTTOM NAVIGATION BAR */}
+        {/* FLOATING BOTTOM-RIGHT "ADD MEMBER" ACTION BUTTON */}
+        <TouchableOpacity
+          style={[
+            styles.floatingAddMemberFab,
+            { bottom: Math.max(insets.bottom, 10) + 82 },
+          ]}
+          onPress={() => {
+            if (onOpenAddMember) onOpenAddMember();
+            else setShowAddMemberModal(true);
+          }}
+          activeOpacity={0.88}
+        >
+          <View style={styles.floatingFabIconWrap}>
+            <AppIcon name="user-plus" size={17} color="#FFFFFF" />
+          </View>
+          <Text style={styles.floatingFabText}>Add Member</Text>
+        </TouchableOpacity>
+
+        {/* FLOATING CURVY BOTTOM NAVIGATION BAR */}
         <View
           style={[
             styles.bottomNavBar,
             {
               backgroundColor: colors.surface,
-              borderTopColor: colors.border,
-              paddingTop: isTablet ? 12 : 10,
-              paddingBottom: Math.max(insets.bottom, isTablet ? 14 : 10),
+              borderColor: isDark ? colors.border : '#E2E8F0',
+              bottom: Math.max(insets.bottom, 10),
             },
           ]}
         >
@@ -566,7 +649,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             }}
             activeOpacity={0.8}
           >
-            <AppIcon name="home" size={isTablet ? 26 : 24} color={activeTab === 'Home' ? '#0083B0' : colors.textMuted} />
+            <AppIcon name="home" size={isTablet ? 24 : 20} color={activeTab === 'Home' ? '#0083B0' : colors.textMuted} />
             <Text
               style={[
                 styles.navLabel,
@@ -577,11 +660,6 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             >
               Home
             </Text>
-            {activeTab === 'Home' ? (
-              <View style={[styles.activeTabIndicator, isTablet && { width: 38, height: 3.5 }]} />
-            ) : (
-              <View style={[styles.tabIndicatorPlaceholder, isTablet && { width: 38, height: 3.5 }]} />
-            )}
           </TouchableOpacity>
 
           {/* Tab 2: Visits */}
@@ -597,7 +675,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             }}
             activeOpacity={0.8}
           >
-            <AppIcon name="calendar" size={isTablet ? 25 : 23} color={activeTab === 'Visits' ? '#0083B0' : colors.textMuted} />
+            <AppIcon name="calendar" size={isTablet ? 24 : 20} color={activeTab === 'Visits' ? '#0083B0' : colors.textMuted} />
             <Text
               style={[
                 styles.navLabel,
@@ -608,11 +686,6 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             >
               Visits
             </Text>
-            {activeTab === 'Visits' ? (
-              <View style={[styles.activeTabIndicator, isTablet && { width: 38, height: 3.5 }]} />
-            ) : (
-              <View style={[styles.tabIndicatorPlaceholder, isTablet && { width: 38, height: 3.5 }]} />
-            )}
           </TouchableOpacity>
 
           {/* Tab 3: Reports */}
@@ -620,10 +693,11 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             style={styles.navTab}
             onPress={() => {
               setActiveTab('Reports');
+              if (onOpenReports) onOpenReports();
             }}
             activeOpacity={0.8}
           >
-            <AppIcon name="document" size={isTablet ? 25 : 23} color={activeTab === 'Reports' ? '#0083B0' : colors.textMuted} />
+            <AppIcon name="document" size={isTablet ? 24 : 20} color={activeTab === 'Reports' ? '#0083B0' : colors.textMuted} />
             <Text
               style={[
                 styles.navLabel,
@@ -634,11 +708,6 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             >
               Reports
             </Text>
-            {activeTab === 'Reports' ? (
-              <View style={[styles.activeTabIndicator, isTablet && { width: 38, height: 3.5 }]} />
-            ) : (
-              <View style={[styles.tabIndicatorPlaceholder, isTablet && { width: 38, height: 3.5 }]} />
-            )}
           </TouchableOpacity>
 
           {/* Tab 4: Care */}
@@ -646,11 +715,12 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             style={styles.navTab}
             onPress={() => {
               setActiveTab('Care');
-              setShowContactModal(true);
+              if (onOpenCare) onOpenCare();
+              else setShowContactModal(true);
             }}
             activeOpacity={0.8}
           >
-            <AppIcon name="care" size={isTablet ? 25 : 23} color={activeTab === 'Care' ? '#0083B0' : colors.textMuted} />
+            <AppIcon name="care" size={isTablet ? 24 : 20} color={activeTab === 'Care' ? '#0083B0' : colors.textMuted} />
             <Text
               style={[
                 styles.navLabel,
@@ -661,11 +731,6 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             >
               Care
             </Text>
-            {activeTab === 'Care' ? (
-              <View style={[styles.activeTabIndicator, isTablet && { width: 38, height: 3.5 }]} />
-            ) : (
-              <View style={[styles.tabIndicatorPlaceholder, isTablet && { width: 38, height: 3.5 }]} />
-            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -695,7 +760,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
                 >
                   <AppIcon
                     name={
-                      actionType === 'Book Visit'
+                      actionType === 'Book Appointment'
                         ? 'calendar'
                         : actionType === 'Pay Bills'
                         ? 'wallet-outline'
@@ -706,8 +771,8 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
                   />
                 </View>
                 <Text style={[styles.modalTitle, isTablet && { fontSize: 20 }]}>
-                  {actionType === 'Book Visit'
-                    ? 'Book Doctor Visit'
+                  {actionType === 'Book Appointment'
+                    ? 'Book Doctor Appointment'
                     : actionType === 'Pay Bills'
                     ? 'Pay Medical Bills'
                     : 'Diet & Nutrition'}
@@ -929,7 +994,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
                 <AppIcon name="calendar" size={20} color="#0284C7" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.actionText}>Book Doctor Visit</Text>
+                <Text style={styles.actionText}>Book Doctor Appointment</Text>
                 <Text style={styles.actionSubtext}>Select specialist & consultation slot</Text>
               </View>
             </TouchableOpacity>
@@ -1672,18 +1737,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginRight: 6,
+    overflow: 'hidden',
   },
   cardPatientName: {
     fontSize: 16,
     fontWeight: '700',
     color: '#0F172A',
     letterSpacing: -0.2,
+    flexShrink: 0,
   },
   // Relation: Pure Blue Text inside () without border
   relationTextOnly: {
     color: '#0083B0',
     fontWeight: '700',
     letterSpacing: 0.3,
+    flexShrink: 1,
   },
   chevronCircle: {
     width: 28,
@@ -1723,31 +1792,31 @@ const styles = StyleSheet.create({
   },
 
   // 5. FLOATING FIXED BOTTOM NAVIGATION BAR
+  // SLIM FLOATING BOTTOM NAVIGATION BAR WITH CURVY CORNERS
   bottomNavBar: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    left: 14,
+    right: 14,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 5,
+    shadowColor: '#0F253E',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
     shadowRadius: 10,
-    elevation: 12,
+    elevation: 7,
     zIndex: 100,
   },
   navTab: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   navLabel: {
     fontSize: 11,
@@ -2276,6 +2345,48 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#DC2626',
+  },
+  addMemberHeaderBtn: {
+    backgroundColor: '#0083B0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 5,
+  },
+  addMemberHeaderBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  floatingAddMemberFab: {
+    position: 'absolute',
+    right: 16,
+    height: 48,
+    paddingHorizontal: 18,
+    borderRadius: 24,
+    backgroundColor: '#0083B0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#0083B0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 90,
+  },
+  floatingFabIconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floatingFabText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
 });
 

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
+import IMAGES from './imageAssets';
 
 interface MobileEntryScreenProps {
   mobileNumber: string;
@@ -31,9 +32,15 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 600 || height >= 950;
-  const availableScreenHeight = Math.max(height - insets.top - insets.bottom - 4, 600);
-  const topSixtyHeight = Math.round(availableScreenHeight * (isTablet ? 0.65 : 0.63));
-  const bottomFortyHeight = availableScreenHeight - topSixtyHeight;
+  const isSmallMobile = width < 380;
+  
+  // Responsive sizing for hero image and typography
+  const heroImgWidth = isTablet ? 380 : (isSmallMobile ? 140 : 155);
+  const heroImgHeight = isTablet ? 360 : (isSmallMobile ? 135 : 150);
+  const heroHeadingFontSize = isTablet ? 36 : (isSmallMobile ? 19 : 21.5);
+  const heroHeadingLineHeight = isTablet ? 44 : (isSmallMobile ? 23 : 26);
+  const heroSubFontSize = isTablet ? 16 : (isSmallMobile ? 10.5 : 11.5);
+  const heroSubLineHeight = isTablet ? 24 : (isSmallMobile ? 14.5 : 16);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safeArea}>
@@ -45,29 +52,22 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
           contentContainerStyle={[
             styles.scrollContent,
             {
-              minHeight: height - insets.top - insets.bottom,
-              paddingBottom: Math.max(insets.bottom, 4),
+              paddingBottom: Math.max(insets.bottom, 12),
             },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
-          <View style={[styles.screenOuter, { minHeight: availableScreenHeight }]}>
-            {/* TOP 60-65% SECTION: HEADER + HERO + MOBILE NUMBER CARD */}
-            <View
-              style={[
-                styles.topSixtySection,
-                {
-                  minHeight: topSixtyHeight,
-                },
-              ]}
-            >
+          <View style={styles.screenOuter}>
+            {/* TOP SECTION: HEADER + HERO + MOBILE NUMBER CARD */}
+            <View style={styles.topSixtySection}>
               {/* TOP HEADER BAR */}
               <View style={[styles.topHeaderBar, isTablet && { paddingTop: 24, paddingBottom: 10 }]}>
                 <View style={styles.brandRow}>
                   <Image
-                    source={require('../assets/images/patient_portal_logo.png')}
+                    source={IMAGES.patientPortalLogo}
+                    fadeDuration={0}
                     style={[styles.portalLogo, isTablet && { width: 66, height: 66 }]}
                     resizeMode="contain"
                   />
@@ -83,34 +83,49 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
                 </View>
               </View>
 
-              {/* HERO SECTION: Title & Main Character */}
-              <View
-                style={[
-                  styles.heroSection,
-                  isTablet && {
-                    marginTop: 10,
-                    marginBottom: 4,
-                    paddingLeft: 42,
-                    paddingRight: 20,
-                  },
-                ]}
-              >
+              {/* HERO SECTION: Main Character Artwork */}
+              <View style={styles.heroSection}>
+                {/* 'Your Health in Your Hands' text commented out to prevent image overlap */}
+                {/* 
                 <View style={styles.heroLeftCol}>
-                  <Text style={[styles.heroHeading, isTablet && { fontSize: 36, lineHeight: 44 }]}>
+                  <Text
+                    style={[
+                      styles.heroHeading,
+                      { fontSize: heroHeadingFontSize, lineHeight: heroHeadingLineHeight },
+                    ]}
+                  >
                     Your Health
                   </Text>
-                  <Text style={[styles.heroHeading, isTablet && { fontSize: 36, lineHeight: 44 }]}>
+                  <Text
+                    style={[
+                      styles.heroHeading,
+                      { fontSize: heroHeadingFontSize, lineHeight: heroHeadingLineHeight },
+                    ]}
+                  >
                     in Your Hands
                   </Text>
-                  <Text style={[styles.heroSubheading, isTablet && { fontSize: 16, lineHeight: 24, marginTop: 14 }]}>
-                    Simple access to appointments,{'\n'}reports and more — anytime,{'\n'}anywhere.
+                  <Text
+                    style={[
+                      styles.heroSubheading,
+                      { fontSize: heroSubFontSize, lineHeight: heroSubLineHeight },
+                    ]}
+                  >
+                    Simple access to appointments,{'\n'}reports & more — anytime.
                   </Text>
                 </View>
+                */}
 
-                <View style={[styles.heroRightCol, isTablet && { height: 360 }]}>
+                <View style={styles.heroRightColCentered}>
                   <Image
-                    source={require('../assets/images/hero_character.png')}
-                    style={[styles.heroImageClean, isTablet && { width: 380, height: 360 }]}
+                    source={IMAGES.heroCharacter}
+                    fadeDuration={0}
+                    style={[
+                      styles.heroImageClean,
+                      {
+                        width: isTablet ? 380 : Math.min(width * 0.88, 280),
+                        height: isTablet ? 360 : Math.min(height * 0.28, 220),
+                      },
+                    ]}
                     resizeMode="contain"
                   />
                 </View>
@@ -169,7 +184,8 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
                   activeOpacity={0.88}
                 >
                   <ImageBackground
-                    source={require('../assets/images/btn_gradient_bg.png')}
+                    source={IMAGES.btnGradientBg}
+                    fadeDuration={0}
                     style={styles.sendOtpGradient}
                     imageStyle={styles.sendOtpGradientImg}
                   >
@@ -202,15 +218,8 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
               </View>
             </View>
 
-            {/* BOTTOM 35-40% SECTION: 3 FEATURES + WAVE FOOTER BG */}
-            <View
-              style={[
-                styles.bottomFortySection,
-                {
-                  minHeight: bottomFortyHeight,
-                },
-              ]}
-            >
+            {/* BOTTOM SECTION: 3 FEATURES + WAVE FOOTER BG */}
+            <View style={styles.bottomFortySection}>
               {/* 3 FEATURE COLUMNS ROW */}
               <View style={[styles.featuresContainer, isTablet && { marginHorizontal: 28, marginTop: 40, marginBottom: 24 }]}>
                 <View style={styles.featureCol}>
@@ -266,7 +275,8 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
               {/* BOTTOM WAVE FOOTER - USING wave_footer_bg.png */}
               <View style={styles.bottomWaveContainer}>
                 <Image
-                  source={require('../assets/images/wave_footer_bg.png')}
+                  source={IMAGES.waveFooterBg}
+                  fadeDuration={0}
                   style={[
                     styles.bottomWaveImage,
                     {
@@ -360,44 +370,39 @@ const styles = StyleSheet.create({
 
   // 2. HERO SECTION
   heroSection: {
-    flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingLeft: 26,
-    paddingRight: 14,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
     marginTop: 6,
+    marginBottom: 6,
     width: '100%',
     zIndex: 1,
   },
   heroLeftCol: {
-    flex: 1.0,
-    paddingTop: 4,
+    width: '100%',
+    alignItems: 'center',
+    paddingTop: 2,
     zIndex: 2,
   },
   heroHeading: {
-    fontSize: 28,
     fontWeight: '800',
     color: '#0B1E36',
-    lineHeight: 34,
     letterSpacing: -0.5,
   },
   heroSubheading: {
-    fontSize: 13.5,
     fontWeight: '400',
     color: '#64748B',
-    lineHeight: 20,
-    marginTop: 10,
+    marginTop: 6,
+    textAlign: 'center',
   },
-  heroRightCol: {
-    flex: 1.5,
-    alignItems: 'flex-end',
+  heroRightColCentered: {
+    width: '100%',
+    alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
   },
   heroImageClean: {
-    width: 260,
-    height: 250,
+    // Dynamic width and height handled via inline style
   },
 
   // 3. FLOATING MOBILE NUMBER INPUT CARD
@@ -406,7 +411,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 22,
     padding: 20,
-    marginTop: -8,
+    marginTop: 6,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#EDF2F7',
