@@ -18,6 +18,7 @@ import { INITIAL_PATIENTS } from './mockData';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
 import IMAGES from './imageAssets';
+import { getActiveMember } from './accountManager';
 
 export interface MedicalReportItem {
   id: string;
@@ -276,6 +277,40 @@ const INITIAL_REPORTS: MedicalReportItem[] = [
     fileSize: '410 KB PDF',
     summary: 'Aceclofenac 100mg BD, Gel application twice daily, Wrist splint',
   },
+
+  // ==========================================
+  // MEMBER 5: CHANDAN CHOUHAN (FATHER · IP PATIENT)
+  // ==========================================
+  {
+    id: 'rep-chandan-1',
+    reportNo: 'RAD-2026-10495',
+    patientId: '5',
+    patientName: 'Chandan Chouhan',
+    relation: 'Father',
+    title: 'In-Patient High Resolution CT Chest & ECG',
+    category: 'Radiology',
+    date: '17 Sep, 2026',
+    doctorName: 'Dr. Chakravarthi PIS',
+    department: 'Cardiology (ICU)',
+    status: 'Ready',
+    fileSize: '5.4 MB PDF',
+    summary: 'Bed 304 - Bilateral lung parenchyma clear, Sinus rhythm, no acute ischemia',
+  },
+  {
+    id: 'rep-chandan-2',
+    reportNo: 'LAB-2026-10215',
+    patientId: '5',
+    patientName: 'Chandan Chouhan',
+    relation: 'Father',
+    title: 'In-Patient Arterial Blood Gas (ABG) & Cardiac Trop-I',
+    category: 'Lab Report',
+    date: '14 Sep, 2026',
+    doctorName: 'Dr. Ananya Sharma',
+    department: 'Pulmonology',
+    status: 'Ready',
+    fileSize: '1.4 MB PDF',
+    summary: 'pO2: 92 mmHg, Troponin-I: < 0.01 ng/mL (Negative for myocardial infarction)',
+  },
 ];
 
 interface ReportsScreenProps {
@@ -283,7 +318,7 @@ interface ReportsScreenProps {
   onBack: () => void;
   onOpenHome?: () => void;
   onOpenVisits?: () => void;
-  onOpenPatientList?: () => void;
+  onOpenPatientList?: (tab?: 'Home' | 'Visits' | 'Reports' | 'Care' | 'IP') => void;
   onOpenCare?: () => void;
 }
 
@@ -303,16 +338,13 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   // Family members list
   const [members] = useState<PatientMember[]>(INITIAL_PATIENTS);
 
-  // Self member by default (Rathi Vijay Sharma)
-  const defaultSelfMember =
-    members.find(
-      (m) =>
-        m.relation.toLowerCase() === 'self' ||
-        m.relation.toLowerCase() === 'you' ||
-        m.name.toLowerCase().includes('rathi')
-    ) || members[0];
+  // Active Self member dynamically from account manager
+  const activeSelfMember = getActiveMember();
+  const [selectedMember, setSelectedMember] = useState<PatientMember>(activeSelfMember);
 
-  const [selectedMember, setSelectedMember] = useState<PatientMember>(defaultSelfMember);
+  useEffect(() => {
+    setSelectedMember(getActiveMember());
+  }, [userSession]);
   const [showMemberSwitchSheet, setShowMemberSwitchSheet] = useState(false);
   const [activeCategory, setActiveCategory] = useState<'All' | 'Lab Report' | 'Radiology' | 'Prescription'>('All');
   const [reports] = useState<MedicalReportItem[]>(INITIAL_REPORTS);
@@ -426,24 +458,24 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
     if (isDark) {
       switch (category) {
         case 'Lab Report':
-          return { bg: 'rgba(2, 132, 199, 0.25)', text: '#38BDF8', border: '#0284C7' };
+          return { bg: colors.primaryLight, text: colors.accent, border: colors.primary };
         case 'Radiology':
           return { bg: 'rgba(147, 51, 234, 0.25)', text: '#C084FC', border: '#9333EA' };
         case 'Prescription':
           return { bg: 'rgba(16, 185, 129, 0.25)', text: '#34D399', border: '#10B981' };
         default:
-          return { bg: 'rgba(0, 131, 176, 0.25)', text: '#38BDF8', border: '#0083B0' };
+          return { bg: colors.primaryLight, text: colors.accent, border: colors.primary };
       }
     }
     switch (category) {
       case 'Lab Report':
-        return { bg: '#E0F2FE', text: '#0284C7', border: '#BAE6FD' };
+        return { bg: colors.primaryLight, text: colors.primary, border: colors.primaryLight };
       case 'Radiology':
         return { bg: '#F3E8FF', text: '#7E22CE', border: '#E9D5FF' };
       case 'Prescription':
         return { bg: '#D1FAE5', text: '#059669', border: '#A7F3D0' };
       default:
-        return { bg: '#DEF0FD', text: '#0083B0', border: '#BAE6FD' };
+        return { bg: colors.primaryLight, text: colors.primary, border: '#BAE6FD' };
     }
   };
 
@@ -482,7 +514,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <AppIcon name="back" size={isTablet ? 24 : 20} color="#0083B0" />
+              <AppIcon name="back" size={isTablet ? 24 : 20} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -520,10 +552,17 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                 <Text style={[styles.switchMemberLabel, { color: colors.textSecondary }]}>
                   CURRENTLY VIEWING
                 </Text>
-                <Text style={[styles.switchMemberName, { color: colors.textPrimary }]} numberOfLines={1}>
-                  {selectedMember.name}{' '}
-                  <Text style={styles.switchMemberRelation}>({selectedMember.relation})</Text>
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={[styles.switchMemberName, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {selectedMember.name}{' '}
+                    <Text style={styles.switchMemberRelation}>({selectedMember.relation})</Text>
+                  </Text>
+                  <View style={[styles.typeBadge, selectedMember.patientType === 'IP' ? styles.ipBadgeBg : styles.opBadgeBg]}>
+                    <Text style={[styles.typeBadgeText, selectedMember.patientType === 'IP' ? styles.ipBadgeText : styles.opBadgeText]}>
+                      {selectedMember.patientType || 'OP'}
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
 
@@ -534,7 +573,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
               activeOpacity={0.75}
             >
               <Text style={styles.switchMemberDropdownText}>Switch Member</Text>
-              <AppIcon name="chevron-down" size={14} color="#0083B0" />
+              <AppIcon name="chevron-down" size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -569,7 +608,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                   <AppIcon
                     name={cat.icon}
                     size={14}
-                    color={isActive ? '#FFFFFF' : '#0083B0'}
+                    color={isActive ? '#FFFFFF' : colors.primary}
                   />
                   <Text
                     style={[
@@ -595,7 +634,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
           {currentMemberReports.length === 0 ? (
             <View style={[styles.emptyBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.emptyIconCircle}>
-                <AppIcon name="document" size={32} color="#0083B0" />
+                <AppIcon name="document" size={32} color={colors.primary} />
               </View>
               <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No Reports Found</Text>
               <Text style={[styles.emptySub, { color: colors.textSecondary }]}>
@@ -616,7 +655,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                   {/* Top Row: Report ID & Category Pill */}
                   <View style={styles.reportCardTopRow}>
                     <View style={styles.reportNoBadge}>
-                      <AppIcon name="document" size={14} color="#0083B0" />
+                      <AppIcon name="document" size={14} color={colors.primary} />
                       <Text style={[styles.reportNoText, { color: colors.textPrimary }]} numberOfLines={1}>
                         {rep.reportNo}
                       </Text>
@@ -639,16 +678,24 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
                   {/* Subtitle Meta Strip */}
                   <View style={[styles.metaStripContainer, { backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF' }]}>
-                    <AppIcon name="calendar" size={13} color="#0083B0" />
+                    <AppIcon name="calendar" size={13} color={colors.primary} />
                     <Text style={[styles.metaSubtitleText, { color: colors.textPrimary }]}>
                       <Text style={styles.metaHighlightName}>{rep.patientName}</Text> · {rep.department} · {rep.date}
                     </Text>
                   </View>
 
-                  {/* Report Findings Summary */}
+                  {/* Report Findings Summary (AI Generated) */}
                   {rep.summary ? (
-                    <View style={[styles.summaryBox, { backgroundColor: isDark ? '#182435' : '#F8FAFC', borderColor: colors.border }]}>
-                      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>SUMMARY / FINDINGS</Text>
+                    <View style={[styles.summaryBox, { backgroundColor: isDark ? '#11221D' : '#F0FDF4', borderColor: isDark ? '#059669' : '#BBF7D0' }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <AppIcon name="sparkles" size={13} color="#059669" />
+                          <Text style={[styles.summaryLabel, { color: '#059669', fontWeight: '800' }]}>SUMMARY</Text>
+                        </View>
+                        <View style={styles.aiBadgeTag}>
+                          <Text style={styles.aiBadgeTagText}>AI Extracted</Text>
+                        </View>
+                      </View>
                       <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>
                         {rep.summary}
                       </Text>
@@ -666,11 +713,11 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                   {/* Action Buttons: View Report & Download PDF */}
                   <View style={styles.cardActionsRow}>
                     <TouchableOpacity
-                      style={[styles.viewReportBtn, { backgroundColor: isDark ? colors.surfaceVariant : '#DEF0FD', borderColor: '#BAE6FD' }]}
+                      style={[styles.viewReportBtn, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight, borderColor: '#BAE6FD' }]}
                       onPress={() => handleViewReport(rep)}
                       activeOpacity={0.75}
                     >
-                      <AppIcon name="eye" size={14} color="#0083B0" />
+                      <AppIcon name="eye" size={14} color={colors.primary} />
                       <Text style={styles.viewReportBtnText} numberOfLines={1}>View Details</Text>
                     </TouchableOpacity>
 
@@ -715,7 +762,22 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 2: Visits */}
+          {/* Tab 2: IP (In-Patients) */}
+          <TouchableOpacity
+            style={styles.navTab}
+            activeOpacity={0.7}
+            onPress={() => {
+              if (onOpenPatientList) onOpenPatientList();
+              else onBack();
+            }}
+          >
+            <AppIcon name="bed-pulse" size={isTablet ? 24 : 20} color={colors.textMuted} />
+            <Text style={[styles.navLabel, { color: colors.textMuted }, isTablet && { fontSize: 12.5 }]}>
+              IP
+            </Text>
+          </TouchableOpacity>
+
+          {/* Tab 3: Visits */}
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.7}
@@ -730,19 +792,19 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 3: Reports (ACTIVE) */}
+          {/* Tab 4: Reports (ACTIVE) */}
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.8}
             onPress={() => {}}
           >
-            <AppIcon name="document" size={isTablet ? 24 : 20} color="#0083B0" />
-            <Text style={[styles.navLabel, { color: '#0083B0' }, styles.navLabelActive, isTablet && { fontSize: 12.5 }]}>
+            <AppIcon name="document" size={isTablet ? 24 : 20} color={colors.primary} />
+            <Text style={[styles.navLabel, { color: colors.primary }, styles.navLabelActive, isTablet && { fontSize: 12.5 }]}>
               Reports
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 4: Care */}
+          {/* Tab 5: Care */}
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.7}
@@ -799,7 +861,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                         styles.memberOptionCard,
                         {
                           backgroundColor: isSelected ? (isDark ? colors.surfaceVariant : '#F0F9FF') : colors.surface,
-                          borderColor: isSelected ? '#0083B0' : colors.border,
+                          borderColor: isSelected ? colors.primary : colors.border,
                         },
                       ]}
                       onPress={() => {
@@ -814,9 +876,16 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                         resizeMode="cover"
                       />
                       <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text style={[styles.memberOptionName, { color: colors.textPrimary }]}>
-                          {member.name}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={[styles.memberOptionName, { color: colors.textPrimary }]}>
+                            {member.name}
+                          </Text>
+                          <View style={[styles.typeBadge, member.patientType === 'IP' ? styles.ipBadgeBg : styles.opBadgeBg]}>
+                            <Text style={[styles.typeBadgeText, member.patientType === 'IP' ? styles.ipBadgeText : styles.opBadgeText]}>
+                              {member.patientType || 'OP'}
+                            </Text>
+                          </View>
+                        </View>
                         <Text style={[styles.memberOptionMeta, { color: colors.textSecondary }]}>
                           {member.relation} · UHID: {member.patientNumber}
                         </Text>
@@ -869,7 +938,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                   <View style={styles.detailsHeaderRow}>
                     <View style={styles.detailsBadgeGroup}>
                       <View style={styles.reportNoBadge}>
-                        <AppIcon name="document" size={15} color="#0083B0" />
+                        <AppIcon name="document" size={15} color={colors.primary} />
                         <Text style={[styles.reportNoText, { color: colors.textPrimary }]}>
                           {selectedReportForDetails.reportNo}
                         </Text>
@@ -909,7 +978,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                     {/* 1. Patient Member Card */}
                     <View style={[styles.detailsSectionBox, { backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF', borderColor: '#BAE6FD' }]}>
                       <View style={styles.detailsBoxHeader}>
-                        <AppIcon name="user" size={15} color="#0083B0" />
+                        <AppIcon name="user" size={15} color={colors.primary} />
                         <Text style={styles.detailsBoxHeaderTitle}>PATIENT INFORMATION</Text>
                       </View>
                       <View style={styles.detailsPatientRow}>
@@ -923,7 +992,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             {selectedReportForDetails.patientName}
                           </Text>
                           <Text style={[styles.detailsPatientMeta, { color: colors.textSecondary }]}>
-                            Relation: <Text style={{ color: '#0083B0', fontWeight: '700' }}>{selectedReportForDetails.relation}</Text> · UHID: {selectedMember.patientNumber || 'PAT-2026-8802'}
+                            Relation: <Text style={{ color: colors.primary, fontWeight: '700' }}>{selectedReportForDetails.relation}</Text> · UHID: {selectedMember.patientNumber || 'PAT-2026-8802'}
                           </Text>
                         </View>
                       </View>
@@ -965,11 +1034,17 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                       </View>
                     </View>
 
-                    {/* 3. Clinical Findings / Summary Box */}
-                    <View style={[styles.detailsSectionBox, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: colors.border }]}>
-                      <View style={styles.detailsBoxHeader}>
-                        <AppIcon name="flask" size={15} color="#0083B0" />
-                        <Text style={styles.detailsBoxHeaderTitle}>CLINICAL FINDINGS & SUMMARY</Text>
+                    {/* 3. Summary Box (AI Extracted) */}
+                    <View style={[styles.detailsSectionBox, { backgroundColor: isDark ? '#11221D' : '#F0FDF4', borderColor: isDark ? '#059669' : '#BBF7D0' }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                        <View style={styles.detailsBoxHeader}>
+                          <AppIcon name="sparkles" size={16} color="#059669" />
+                          <Text style={[styles.detailsBoxHeaderTitle, { color: '#059669', fontWeight: '800' }]}>SUMMARY</Text>
+                        </View>
+                        <View style={styles.aiBadgeTagDetails}>
+                          <AppIcon name="sparkles" size={12} color="#047857" />
+                          <Text style={styles.aiBadgeTagDetailsText}>AI Extracted</Text>
+                        </View>
                       </View>
                       <Text style={[styles.detailsSummaryBody, { color: colors.textPrimary }]}>
                         {selectedReportForDetails.summary}
@@ -978,7 +1053,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
                     {/* 4. Digital Security Certification Banner */}
                     <View style={styles.securityCertBox}>
-                      <AppIcon name="shield-check" size={16} color="#0083B0" />
+                      <AppIcon name="shield-check" size={16} color={colors.primary} />
                       <Text style={styles.securityCertText}>
                         Digitally authenticated record · 256-Bit Encrypted Lab Signature
                       </Text>
@@ -1054,7 +1129,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: '#DEF0FD',
     opacity: 0.45,
   },
   ambientWaveImage: {
@@ -1671,6 +1746,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  typeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  opBadgeBg: {
+    backgroundColor: '#E0F2FE',
+  },
+  opBadgeText: {
+    color: '#0284C7',
+  },
+  ipBadgeBg: {
+    backgroundColor: '#FEF3C7',
+  },
+  ipBadgeText: {
+    color: '#D97706',
+  },
+  typeBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+  },
+  aiBadgeTagDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#6EE7B7',
+  },
+  aiBadgeTagDetailsText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#047857',
+    letterSpacing: 0.3,
+  },
+  aiBadgeTag: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#6EE7B7',
+  },
+  aiBadgeTagText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#047857',
   },
 });
 

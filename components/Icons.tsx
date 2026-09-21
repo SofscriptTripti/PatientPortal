@@ -5,6 +5,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Entypo from 'react-native-vector-icons/Entypo';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import FontAwesome6 from 'react-native-vector-icons/FontAwesome6';
 
 export type IconType =
   | 'user'
@@ -67,11 +68,21 @@ export type IconType =
   | 'medkit'
   | 'pulse'
   | 'sparkles'
+  | 'sparkles-ai'
+  | 'robot'
+  | 'ai'
   | 'camera'
   | 'image'
   | 'gift'
   | 'plus'
-  | 'minus';
+  | 'minus'
+  | 'bed-pulse'
+  | 'hospital-bed'
+  | 'bed'
+  | 'bed-outline'
+  | 'mail'
+  | 'email'
+  | 'walk';
 
 interface IconProps {
   name: IconType;
@@ -87,6 +98,12 @@ export const AppIcon: React.FC<IconProps> = ({
   style,
 }) => {
   switch (name) {
+    case 'walk':
+    case 'bed-pulse':
+    case 'hospital-bed':
+    case 'bed':
+    case 'bed-outline':
+      return <MaterialCommunityIcons name="walk" size={size} color={color} style={style} />;
     case 'user':
     case 'user-outline':
       return <MaterialIcons name="person-outline" size={size} color={color} style={style} />;
@@ -196,12 +213,19 @@ export const AppIcon: React.FC<IconProps> = ({
       return <MaterialCommunityIcons name="pill" size={size} color={color} style={style} />;
     case 'chevron-up':
       return <Ionicons name="chevron-up" size={size} color={color} style={style} />;
+    case 'mail':
+    case 'email':
+      return <Ionicons name="mail-outline" size={size} color={color} style={style} />;
     case 'medkit':
       return <Ionicons name="medkit-outline" size={size} color={color} style={style} />;
     case 'pulse':
       return <Ionicons name="pulse" size={size} color={color} style={style} />;
     case 'sparkles':
-      return <MaterialCommunityIcons name="sparkles" size={size} color={color} style={style} />;
+    case 'sparkles-ai':
+      return <Ionicons name="sparkles-sharp" size={size} color={color} style={style} />;
+    case 'robot':
+    case 'ai':
+      return <MaterialCommunityIcons name="robot-outline" size={size} color={color} style={style} />;
     case 'camera':
       return <Ionicons name="camera" size={size} color={color} style={style} />;
     case 'image':

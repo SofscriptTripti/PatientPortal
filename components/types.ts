@@ -12,6 +12,7 @@ export interface PatientMember {
   registrationStatus: RegistrationStatus;
   mobileNumber: string;
   patientNumber: string;
+  ipNo?: string;
   genderType: 'M' | 'F';
   customAvatarUri?: string;
   dateAdded?: string;
@@ -20,6 +21,9 @@ export interface PatientMember {
   addressLine1?: string;
   addressLine2?: string;
   aadhaarNo?: string;
+  email?: string;
+  patientType?: 'OP' | 'IP';
+  bedNumber?: string;
 }
 
 export interface UserSession {

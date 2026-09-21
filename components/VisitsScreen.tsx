@@ -15,9 +15,25 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import AppIcon from './Icons';
 import { UserSession, PatientMember } from './types';
 import { INITIAL_PATIENTS } from './mockData';
+import IMAGES from './imageAssets';
+import { getActiveMember } from './accountManager';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
-import IMAGES from './imageAssets';
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
 
 export interface AppointmentItem {
   id: string;
@@ -308,6 +324,42 @@ const INITIAL_APPOINTMENTS: AppointmentItem[] = [
     chiefComplaint: 'Seasonal flu symptoms and post-recovery check',
     fee: '₹500',
   },
+
+  // ==========================================
+  // MEMBER 5: CHANDAN CHOUHAN (FATHER · IP PATIENT · 2 VISITS)
+  // ==========================================
+  {
+    id: 'apt-chandan-1',
+    aptNo: 'APT-2026-10490',
+    patientId: '5',
+    patientName: 'Chandan Chouhan',
+    relation: 'Father',
+    department: 'Cardiology (ICU / Ward 4A)',
+    doctorName: 'Dr. Chakravarthi PIS',
+    qualification: 'MBBS, MD, DM - Senior Cardiologist',
+    doctorAvatar: IMAGES.avatarDoctor,
+    patientAvatar: IMAGES.avatarMale,
+    dateTime: '2026-09-17 08:30 AM',
+    status: 'Confirmed',
+    chiefComplaint: 'In-Patient daily round & cardiac monitoring review (Bed 304)',
+    fee: '₹1200',
+  },
+  {
+    id: 'apt-chandan-2',
+    aptNo: 'APT-2026-10210',
+    patientId: '5',
+    patientName: 'Chandan Chouhan',
+    relation: 'Father',
+    department: 'Pulmonology',
+    doctorName: 'Dr. Ananya Sharma',
+    qualification: 'MBBS, MD, DTCD - Pulmonologist',
+    doctorAvatar: IMAGES.avatarDoctorFemale,
+    patientAvatar: IMAGES.avatarMale,
+    dateTime: '2026-09-14 02:00 PM',
+    status: 'Completed',
+    chiefComplaint: 'Post-admission chest X-Ray & oxygen saturation review',
+    fee: '₹900',
+  },
 ];
 
 interface VisitsScreenProps {
@@ -315,7 +367,7 @@ interface VisitsScreenProps {
   onBack: () => void;
   onBookNewVisit: () => void;
   onOpenHome?: () => void;
-  onOpenPatientList?: () => void;
+  onOpenPatientList?: (tab?: 'Home' | 'Visits' | 'Reports' | 'Care' | 'IP') => void;
   onOpenReports?: () => void;
   onOpenCare?: () => void;
 }
@@ -337,17 +389,13 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
   // Family members list
   const [members] = useState<PatientMember[]>(INITIAL_PATIENTS);
 
-  // Self member by default (Rathi Vijay Sharma)
-  const defaultSelfMember =
-    members.find(
-      (m) =>
-        m.relation.toLowerCase() === 'self' ||
-        m.relation.toLowerCase() === 'you' ||
-        m.name.toLowerCase().includes('rathi')
-    ) || members[0];
+  // Active Self member dynamically from account manager
+  const activeSelfMember = getActiveMember();
+  const [selectedMember, setSelectedMember] = useState<PatientMember>(activeSelfMember);
 
-  // 1. Initial State: Directly show Visits & Appointments with "Self" pre-selected by default
-  const [selectedMember, setSelectedMember] = useState<PatientMember>(defaultSelfMember);
+  useEffect(() => {
+    setSelectedMember(getActiveMember());
+  }, [userSession]);
 
   // Switch Member Bottom Sheet State
   const [showMemberSwitchSheet, setShowMemberSwitchSheet] = useState(false);
@@ -355,10 +403,19 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
   // Appointments state
   const [appointments, setAppointments] = useState<AppointmentItem[]>(INITIAL_APPOINTMENTS);
 
-  // 2. Reschedule / Cancel Bottom Sheet State (Slide from bottom, covers screen width, curvy top)
+  // 2. Interactive Reschedule Bottom Sheet State
   const [showRescheduleSheet, setShowRescheduleSheet] = useState(false);
   const [rescheduleApt, setRescheduleApt] = useState<AppointmentItem | null>(null);
-  const [selectedNewDate, setSelectedNewDate] = useState('Tomorrow, 10:30 AM');
+  const [rescheduleDateType, setRescheduleDateType] = useState<'today' | 'tomorrow' | 'calendar'>('tomorrow');
+  const [rescheduleSelectedDate, setRescheduleSelectedDate] = useState<string>('20-09-2026');
+  const [rescheduleSelectedSlot, setRescheduleSelectedSlot] = useState<string>('10:30 AM');
+
+  // Reschedule Calendar Modal State
+  const [showRescheduleCalendarModal, setShowRescheduleCalendarModal] = useState<boolean>(false);
+  const [rescheduleCalYear, setRescheduleCalYear] = useState<number>(2026);
+  const [rescheduleCalMonth, setRescheduleCalMonth] = useState<number>(8); // 0-indexed: 8 = Sept
+  const [rescheduleCalDay, setRescheduleCalDay] = useState<number>(20);
+  const [showRescheduleYearGrid, setShowRescheduleYearGrid] = useState<boolean>(false);
 
   // Loader state
   const [loaderState, setLoaderState] = useState<{
@@ -393,7 +450,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
     if (member.genderType === 'F' || member.relation.toLowerCase() === 'wife') {
       return '#FDE1E7';
     }
-    return '#DEF0FD';
+    return colors.primaryLight;
   };
 
   // Helper to get status colors
@@ -401,8 +458,8 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
     switch (status) {
       case 'Appointment Requested':
         return {
-          bg: isDark ? '#1E3A5F' : '#DEF0FD',
-          text: '#0083B0',
+          bg: isDark ? '#1E3A5F' : colors.primaryLight,
+          text: colors.primary,
           icon: 'clock' as const,
         };
       case 'Confirmed':
@@ -429,17 +486,21 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
   // Open Reschedule/Cancel Bottom Sheet
   const handleOpenReschedule = (apt: AppointmentItem) => {
     setRescheduleApt(apt);
+    setRescheduleDateType('tomorrow');
+    setRescheduleSelectedDate('20-09-2026');
+    setRescheduleSelectedSlot('10:30 AM');
     setShowRescheduleSheet(true);
   };
 
   // Execute Reschedule
   const handleConfirmReschedule = () => {
     if (!rescheduleApt) return;
+    const newDateTime = `${rescheduleSelectedDate} ${rescheduleSelectedSlot}`;
     setShowRescheduleSheet(false);
     setLoaderState({
       visible: true,
       message: 'Rescheduling Appointment...',
-      subtitle: `Booking ${selectedNewDate} with ${rescheduleApt.doctorName}`,
+      subtitle: `Booking ${newDateTime} with ${rescheduleApt.doctorName}`,
     });
 
     setTimeout(() => {
@@ -447,13 +508,13 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
       setAppointments((prev) =>
         prev.map((item) =>
           item.id === rescheduleApt.id
-            ? { ...item, dateTime: selectedNewDate, status: 'Confirmed' }
+            ? { ...item, dateTime: newDateTime, status: 'Confirmed' }
             : item
         )
       );
       Alert.alert(
-        'Appointment Rescheduled',
-        `Your visit for ${rescheduleApt.patientName} is now confirmed for ${selectedNewDate}.`
+        'Appointment Rescheduled! 🎉',
+        `Your visit for ${rescheduleApt.patientName} with ${rescheduleApt.doctorName} is now confirmed for ${rescheduleSelectedDate} at ${rescheduleSelectedSlot}.`
       );
     }, 700);
   };
@@ -507,6 +568,10 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
 
   useEffect(() => {
     const onBackPress = () => {
+      if (showRescheduleCalendarModal) {
+        setShowRescheduleCalendarModal(false);
+        return true;
+      }
       if (showMemberSwitchSheet) {
         setShowMemberSwitchSheet(false);
         return true;
@@ -521,7 +586,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => subscription.remove();
-  }, [showMemberSwitchSheet, showRescheduleSheet, onBack]);
+  }, [showRescheduleCalendarModal, showMemberSwitchSheet, showRescheduleSheet, onBack]);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -558,7 +623,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <AppIcon name="back" size={isTablet ? 24 : 20} color="#0083B0" />
+              <AppIcon name="back" size={isTablet ? 24 : 20} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -599,10 +664,17 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                   <Text style={[styles.switchMemberLabel, { color: colors.textSecondary }]}>
                     CURRENTLY VIEWING
                   </Text>
-                  <Text style={[styles.switchMemberName, { color: colors.textPrimary }]}>
-                    {selectedMember.name}{' '}
-                    <Text style={styles.switchMemberRelation}>({selectedMember.relation})</Text>
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={[styles.switchMemberName, { color: colors.textPrimary }]}>
+                      {selectedMember.name}{' '}
+                      <Text style={styles.switchMemberRelation}>({selectedMember.relation})</Text>
+                    </Text>
+                    <View style={[styles.typeBadge, selectedMember.patientType === 'IP' ? styles.ipBadgeBg : styles.opBadgeBg]}>
+                      <Text style={[styles.typeBadgeText, selectedMember.patientType === 'IP' ? styles.ipBadgeText : styles.opBadgeText]}>
+                        {selectedMember.patientType || 'OP'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </View>
 
@@ -613,7 +685,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                 activeOpacity={0.75}
               >
                 <Text style={styles.switchMemberDropdownText}>Switch Member</Text>
-                <AppIcon name="chevron-down" size={15} color="#0083B0" />
+                <AppIcon name="chevron-down" size={15} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
@@ -627,7 +699,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
             {/* APPOINTMENTS LIST FOR THIS MEMBER */}
             {currentMemberAppointments.length === 0 ? (
               <View style={[styles.emptyBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <AppIcon name="calendar" size={40} color="#0083B0" />
+                <AppIcon name="calendar" size={40} color={colors.primary} />
                 <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No Visits Found</Text>
                 <Text style={[styles.emptySub, { color: colors.textSecondary }]}>
                   {selectedMember.name} does not have any scheduled or past appointments.
@@ -655,7 +727,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                     {/* Card Top Row: Appointment ID & Status Badge */}
                     <View style={styles.visitCardTopRow}>
                       <View style={styles.aptNoBadge}>
-                        <AppIcon name="document" size={15} color="#0083B0" />
+                        <AppIcon name="document" size={15} color={colors.primary} />
                         <Text style={[styles.aptNoText, { color: colors.textPrimary }]}>{apt.aptNo}</Text>
                       </View>
 
@@ -667,7 +739,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
 
                     {/* Doctor Info Row */}
                     <View style={styles.doctorInfoRow}>
-                      <View style={[styles.doctorAvatarBox, { backgroundColor: '#DEF0FD' }]}>
+                      <View style={[styles.doctorAvatarBox, { backgroundColor: colors.primaryLight }]}>
                         <Image
                           source={apt.doctorAvatar}
                           style={styles.doctorAvatarImg}
@@ -692,7 +764,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
 
                     {/* Subtitle Line: Member Name · Department · Date/Time */}
                     <View style={[styles.metaStripContainer, { backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF' }]}>
-                      <AppIcon name="calendar" size={13} color="#0083B0" />
+                      <AppIcon name="calendar" size={13} color={colors.primary} />
                       <Text style={[styles.metaSubtitleText, { color: colors.textPrimary }]} numberOfLines={2}>
                         <Text style={styles.metaHighlightName}>{apt.patientName}</Text>
                         {' '}· {apt.department} · {apt.dateTime}
@@ -788,19 +860,34 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 2: Visits (ACTIVE) */}
+          {/* Tab 2: IP (In-Patients) */}
+          <TouchableOpacity
+            style={styles.navTab}
+            activeOpacity={0.7}
+            onPress={() => {
+              if (onOpenPatientList) onOpenPatientList();
+              else onBack();
+            }}
+          >
+            <AppIcon name="bed-pulse" size={isTablet ? 24 : 20} color={colors.textMuted} />
+            <Text style={[styles.navLabel, { color: colors.textMuted }, isTablet && { fontSize: 12.5 }]}>
+              IP
+            </Text>
+          </TouchableOpacity>
+
+          {/* Tab 3: Visits (ACTIVE) */}
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.8}
             onPress={() => {}}
           >
-            <AppIcon name="calendar" size={isTablet ? 24 : 20} color="#0083B0" />
-            <Text style={[styles.navLabel, { color: '#0083B0' }, styles.navLabelActive, isTablet && { fontSize: 12.5 }]}>
+            <AppIcon name="calendar" size={isTablet ? 24 : 20} color={colors.primary} />
+            <Text style={[styles.navLabel, { color: colors.primary }, styles.navLabelActive, isTablet && { fontSize: 12.5 }]}>
               Visits
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 3: Reports */}
+          {/* Tab 4: Reports */}
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.7}
@@ -816,7 +903,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 4: Care */}
+          {/* Tab 5: Care */}
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.7}
@@ -892,7 +979,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                       key={member.id}
                       style={[
                         styles.sheetMemberItem,
-                        { borderColor: isSelected ? '#0083B0' : colors.border },
+                        { borderColor: isSelected ? colors.primary : colors.border },
                         isSelected && { backgroundColor: isDark ? '#1E3A5F' : '#F0F9FF' },
                       ]}
                       onPress={() => {
@@ -907,9 +994,16 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                         resizeMode="cover"
                       />
                       <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text style={[styles.sheetMemberName, { color: colors.textPrimary }]}>
-                          {member.name}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={[styles.sheetMemberName, { color: colors.textPrimary }]}>
+                            {member.name}
+                          </Text>
+                          <View style={[styles.typeBadge, member.patientType === 'IP' ? styles.ipBadgeBg : styles.opBadgeBg]}>
+                            <Text style={[styles.typeBadgeText, member.patientType === 'IP' ? styles.ipBadgeText : styles.opBadgeText]}>
+                              {member.patientType || 'OP'}
+                            </Text>
+                          </View>
+                        </View>
                         <Text style={[styles.sheetMemberSub, { color: colors.textSecondary }]}>
                           {member.relation} · UHID: {member.patientNumber}
                         </Text>
@@ -920,7 +1014,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                           <AppIcon name="check" size={14} color="#FFFFFF" />
                         </View>
                       ) : (
-                        <Text style={[styles.sheetVisitCountPill, { color: '#0083B0' }]}>
+                        <Text style={[styles.sheetVisitCountPill, { color: colors.primary }]}>
                           {memberAptCount} visit(s)
                         </Text>
                       )}
@@ -981,7 +1075,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
 
               {/* Current Appointment Snapshot */}
               <View style={[styles.sheetCurrentBox, { backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF', borderColor: '#BAE6FD' }]}>
-                <Text style={[styles.sheetCurrentBoxTitle, { color: '#0083B0' }]}>CURRENT APPOINTMENT</Text>
+                <Text style={[styles.sheetCurrentBoxTitle, { color: colors.primary }]}>CURRENT APPOINTMENT</Text>
                 <Text style={[styles.sheetCurrentDoc, { color: colors.textPrimary }]}>
                   {rescheduleApt?.doctorName} · {rescheduleApt?.department}
                 </Text>
@@ -990,50 +1084,165 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                 </Text>
               </View>
 
-              <Text style={[styles.sheetSectionLabel, { color: colors.textSecondary }]}>
-                SELECT NEW TIME SLOT:
+              {/* 1. SELECT DATE SECTION */}
+              <Text style={[styles.sheetSectionLabel, { color: colors.textSecondary, marginTop: 10 }]}>
+                1. SELECT NEW DATE:
               </Text>
 
-              {/* Slot Choices */}
-              <View style={{ gap: 8, marginBottom: 18 }}>
-                {[
-                  'Tomorrow, 10:30 AM',
-                  'Tomorrow, 04:15 PM',
-                  'In 2 Days, 11:00 AM',
-                ].map((slot) => {
-                  const isSelected = selectedNewDate === slot;
-                  return (
-                    <TouchableOpacity
-                      key={slot}
-                      style={[
-                        styles.sheetSlotOptionPill,
-                        isSelected
-                          ? { backgroundColor: '#0083B0', borderColor: '#0083B0' }
-                          : { backgroundColor: isDark ? '#162032' : '#F8FAFC', borderColor: colors.border },
-                      ]}
-                      onPress={() => setSelectedNewDate(slot)}
-                      activeOpacity={0.8}
-                    >
-                      <AppIcon
-                        name="clock"
-                        size={14}
-                        color={isSelected ? '#FFFFFF' : colors.textSecondary}
-                      />
-                      <Text
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+                {/* Option A: Today */}
+                <TouchableOpacity
+                  style={[
+                    styles.dateChoicePill,
+                    rescheduleDateType === 'today'
+                      ? [styles.dateChoicePillActive, { backgroundColor: colors.primary, borderColor: colors.primary }]
+                      : { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC', borderColor: colors.border },
+                  ]}
+                  onPress={() => {
+                    setRescheduleDateType('today');
+                    setRescheduleSelectedDate('19-09-2026');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <AppIcon name="calendar" size={13} color={rescheduleDateType === 'today' ? '#FFFFFF' : colors.textSecondary} />
+                  <Text style={[styles.dateChoiceText, { color: rescheduleDateType === 'today' ? '#FFFFFF' : colors.textPrimary }]}>
+                    Today (19 Sep)
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Option B: Tomorrow */}
+                <TouchableOpacity
+                  style={[
+                    styles.dateChoicePill,
+                    rescheduleDateType === 'tomorrow'
+                      ? [styles.dateChoicePillActive, { backgroundColor: colors.primary, borderColor: colors.primary }]
+                      : { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC', borderColor: colors.border },
+                  ]}
+                  onPress={() => {
+                    setRescheduleDateType('tomorrow');
+                    setRescheduleSelectedDate('20-09-2026');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <AppIcon name="calendar" size={13} color={rescheduleDateType === 'tomorrow' ? '#FFFFFF' : colors.textSecondary} />
+                  <Text style={[styles.dateChoiceText, { color: rescheduleDateType === 'tomorrow' ? '#FFFFFF' : colors.textPrimary }]}>
+                    Tomorrow (20 Sep)
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Option C: Custom Calendar */}
+                <TouchableOpacity
+                  style={[
+                    styles.dateChoicePill,
+                    rescheduleDateType === 'calendar'
+                      ? [styles.dateChoicePillActive, { backgroundColor: colors.primary, borderColor: colors.primary }]
+                      : { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC', borderColor: colors.border },
+                  ]}
+                  onPress={() => {
+                    setShowRescheduleYearGrid(false);
+                    setShowRescheduleCalendarModal(true);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <AppIcon name="calendar" size={13} color={rescheduleDateType === 'calendar' ? '#FFFFFF' : colors.textSecondary} />
+                  <Text style={[styles.dateChoiceText, { color: rescheduleDateType === 'calendar' ? '#FFFFFF' : colors.textPrimary }]}>
+                    {rescheduleDateType === 'calendar' ? rescheduleSelectedDate : 'Calendar 📅'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* 2. SELECT TIME SLOT SECTION */}
+              <Text style={[styles.sheetSectionLabel, { color: colors.textSecondary, marginTop: 4 }]}>
+                2. SELECT TIME SLOT:
+              </Text>
+
+              <ScrollView style={{ maxHeight: 180, marginBottom: 14 }} showsVerticalScrollIndicator={false}>
+                {/* Category: Morning Slots */}
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 }}>MORNING SLOTS</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                  {['09:00 AM', '09:30 AM', '10:15 AM', '11:00 AM', '11:30 AM'].map((slot) => {
+                    const isSelected = rescheduleSelectedSlot === slot;
+                    return (
+                      <TouchableOpacity
+                        key={slot}
                         style={[
-                          styles.sheetSlotOptionText,
-                          { color: isSelected ? '#FFFFFF' : colors.textPrimary },
+                          styles.rescheduleSlotPill,
+                          isSelected
+                            ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                            : { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC', borderColor: colors.border },
                         ]}
+                        onPress={() => setRescheduleSelectedSlot(slot)}
+                        activeOpacity={0.8}
                       >
-                        {slot}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        <Text style={[styles.rescheduleSlotText, { color: isSelected ? '#FFFFFF' : colors.textPrimary }]}>
+                          {slot}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Category: Afternoon Slots */}
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 }}>AFTERNOON SLOTS</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                  {['12:30 PM', '01:15 PM', '02:00 PM', '03:00 PM'].map((slot) => {
+                    const isSelected = rescheduleSelectedSlot === slot;
+                    return (
+                      <TouchableOpacity
+                        key={slot}
+                        style={[
+                          styles.rescheduleSlotPill,
+                          isSelected
+                            ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                            : { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC', borderColor: colors.border },
+                        ]}
+                        onPress={() => setRescheduleSelectedSlot(slot)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.rescheduleSlotText, { color: isSelected ? '#FFFFFF' : colors.textPrimary }]}>
+                          {slot}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Category: Evening Slots */}
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 }}>EVENING SLOTS</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {['04:15 PM', '05:00 PM', '06:00 PM', '07:15 PM'].map((slot) => {
+                    const isSelected = rescheduleSelectedSlot === slot;
+                    return (
+                      <TouchableOpacity
+                        key={slot}
+                        style={[
+                          styles.rescheduleSlotPill,
+                          isSelected
+                            ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                            : { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC', borderColor: colors.border },
+                        ]}
+                        onPress={() => setRescheduleSelectedSlot(slot)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.rescheduleSlotText, { color: isSelected ? '#FFFFFF' : colors.textPrimary }]}>
+                          {slot}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              {/* NEW SLOT SUMMARY PREVIEW */}
+              <View style={[styles.newSlotSummaryPill, { backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF', borderColor: isDark ? colors.border : '#BAE6FD' }]}>
+                <AppIcon name="clock" size={14} color={colors.primary} />
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.textPrimary }}>
+                  New Slot: <Text style={{ color: colors.primary }}>{rescheduleSelectedDate} at {rescheduleSelectedSlot}</Text>
+                </Text>
               </View>
 
               {/* Action Buttons */}
-              <View style={{ gap: 10 }}>
+              <View style={{ gap: 10, marginTop: 10 }}>
                 <TouchableOpacity
                   style={styles.sheetConfirmRescheduleBtn}
                   onPress={handleConfirmReschedule}
@@ -1052,6 +1261,202 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                   <Text style={styles.sheetCancelDestructiveText}>Cancel This Appointment</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ========================================================
+            MODAL C: INTERACTIVE CALENDAR DATE PICKER MODAL
+           ======================================================== */}
+        <Modal
+          visible={showRescheduleCalendarModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowRescheduleCalendarModal(false)}
+        >
+          <View style={styles.calendarModalOverlay}>
+            <View style={[styles.calendarModalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {/* Calendar Header with Month/Year Navigation */}
+              <View style={styles.calendarHeaderRow}>
+                <TouchableOpacity
+                  disabled={rescheduleCalYear <= 2026 && rescheduleCalMonth <= 8}
+                  onPress={() => {
+                    if (rescheduleCalMonth === 0) {
+                      setRescheduleCalMonth(11);
+                      setRescheduleCalYear((y) => Math.max(2026, y - 1));
+                    } else {
+                      setRescheduleCalMonth((m) => m - 1);
+                    }
+                  }}
+                  style={[styles.calNavBtn, (rescheduleCalYear <= 2026 && rescheduleCalMonth <= 8) && { opacity: 0.3 }]}
+                >
+                  <AppIcon name="back" size={16} color={colors.primary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setShowRescheduleYearGrid((prev) => !prev)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                >
+                  <Text style={[styles.calendarMonthYearText, { color: colors.textPrimary }]}>
+                    {MONTH_NAMES[rescheduleCalMonth]} {rescheduleCalYear}
+                  </Text>
+                  <AppIcon name="chevron-down" size={14} color={colors.primary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  disabled={rescheduleCalYear >= 2029 && rescheduleCalMonth >= 11}
+                  onPress={() => {
+                    if (rescheduleCalMonth === 11) {
+                      setRescheduleCalMonth(0);
+                      setRescheduleCalYear((y) => Math.min(2029, y + 1));
+                    } else {
+                      setRescheduleCalMonth((m) => m + 1);
+                    }
+                  }}
+                  style={[styles.calNavBtn, (rescheduleCalYear >= 2029 && rescheduleCalMonth >= 11) && { opacity: 0.3 }]}
+                >
+                  <AppIcon name="arrow-right" size={16} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+
+              {showRescheduleYearGrid ? (
+                <View style={{ paddingVertical: 10 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 8 }}>
+                    Select Year (2026 – 2029):
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                    {[2026, 2027, 2028, 2029].map((yr) => (
+                      <TouchableOpacity
+                        key={yr}
+                        style={{
+                          paddingHorizontal: 16,
+                          paddingVertical: 8,
+                          borderRadius: 8,
+                          backgroundColor: rescheduleCalYear === yr ? colors.primary : (isDark ? colors.surfaceVariant : '#F1F5F9'),
+                        }}
+                        onPress={() => setRescheduleCalYear(yr)}
+                      >
+                        <Text style={{ color: rescheduleCalYear === yr ? '#FFF' : colors.textPrimary, fontWeight: '700' }}>
+                          {yr}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 8 }}>
+                    Select Month:
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {MONTH_NAMES.map((mName, idx) => {
+                      const isPastMonth = rescheduleCalYear === 2026 && idx < 8;
+                      const isSel = rescheduleCalMonth === idx;
+                      return (
+                        <TouchableOpacity
+                          key={mName}
+                          disabled={isPastMonth}
+                          style={{
+                            width: '30%',
+                            paddingVertical: 8,
+                            alignItems: 'center',
+                            borderRadius: 8,
+                            backgroundColor: isSel ? colors.primary : (isDark ? colors.surfaceVariant : '#F1F5F9'),
+                            opacity: isPastMonth ? 0.35 : 1,
+                          }}
+                          onPress={() => {
+                            if (!isPastMonth) {
+                              setRescheduleCalMonth(idx);
+                              setShowRescheduleYearGrid(false);
+                            }
+                          }}
+                        >
+                          <Text style={{ color: isSel ? '#FFF' : colors.textPrimary, fontWeight: '600', fontSize: 12 }}>
+                            {mName.slice(0, 3)}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : (
+                <>
+                  {/* Days of Week Header */}
+                  <View style={styles.calWeekDaysRow}>
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                      <Text key={d} style={[styles.calWeekDayText, { color: colors.textSecondary }]}>
+                        {d}
+                      </Text>
+                    ))}
+                  </View>
+
+                  {/* Grid of Days */}
+                  <View style={styles.calDaysGrid}>
+                    {(() => {
+                      const daysInMonth = new Date(rescheduleCalYear, rescheduleCalMonth + 1, 0).getDate();
+                      const firstDay = new Date(rescheduleCalYear, rescheduleCalMonth, 1).getDay();
+                      const grid = [];
+                      const todayRef = new Date(2026, 8, 19);
+                      todayRef.setHours(0, 0, 0, 0);
+
+                      for (let i = 0; i < firstDay; i++) {
+                        grid.push(<View key={`blank-${i}`} style={styles.calDayBox} />);
+                      }
+
+                      for (let d = 1; d <= daysInMonth; d++) {
+                        const cellDate = new Date(rescheduleCalYear, rescheduleCalMonth, d);
+                        cellDate.setHours(0, 0, 0, 0);
+                        const isPast = cellDate.getTime() < todayRef.getTime();
+                        const isSelected = rescheduleCalDay === d;
+
+                        grid.push(
+                          <TouchableOpacity
+                            key={`day-${d}`}
+                            disabled={isPast}
+                            style={[
+                              styles.calDayBox,
+                              isSelected && [styles.calDayBoxSelected, { backgroundColor: colors.primary }],
+                              isPast && { opacity: 0.35, backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9' },
+                            ]}
+                            onPress={() => {
+                              if (!isPast) {
+                                setRescheduleCalDay(d);
+                              }
+                            }}
+                            activeOpacity={isPast ? 1 : 0.8}
+                          >
+                            <Text
+                              style={[
+                                styles.calDayText,
+                                { color: colors.textPrimary },
+                                isSelected && { color: '#FFFFFF', fontWeight: '800' },
+                                isPast && { color: isDark ? '#64748B' : '#94A3B8' },
+                              ]}
+                            >
+                              {d}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      }
+                      return grid;
+                    })()}
+                  </View>
+                </>
+              )}
+
+              {/* Confirm Date Action Button */}
+              <TouchableOpacity
+                style={[styles.confirmCalDateBtn, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  const dStr = rescheduleCalDay.toString().padStart(2, '0');
+                  const mStr = (rescheduleCalMonth + 1).toString().padStart(2, '0');
+                  const formatted = `${dStr}-${mStr}-${rescheduleCalYear}`;
+                  setRescheduleSelectedDate(formatted);
+                  setRescheduleDateType('calendar');
+                  setShowRescheduleCalendarModal(false);
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.confirmCalDateBtnText}>Set Selected Date ({rescheduleCalDay.toString().padStart(2, '0')}/{(rescheduleCalMonth + 1).toString().padStart(2, '0')}/{rescheduleCalYear})</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -1105,7 +1510,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: '#DEF0FD',
     opacity: 0.45,
   },
   ambientWaveImage: {
@@ -1754,6 +2159,137 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 13.5,
     fontWeight: '700',
+  },
+  typeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  opBadgeBg: {
+    backgroundColor: '#E0F2FE',
+  },
+  opBadgeText: {
+    color: '#0284C7',
+  },
+  ipBadgeBg: {
+    backgroundColor: '#FEF3C7',
+  },
+  ipBadgeText: {
+    color: '#D97706',
+  },
+  typeBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+  },
+  // RESCHEDULE DATE & SLOT STYLES
+  dateChoicePill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  dateChoicePillActive: {},
+  dateChoiceText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  rescheduleSlotPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+  },
+  rescheduleSlotText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  newSlotSummaryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginBottom: 4,
+  },
+  // CALENDAR MODAL STYLES
+  calendarModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 37, 62, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  calendarModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1.5,
+    elevation: 8,
+  },
+  calendarHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  calendarMonthYearText: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  calNavBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calWeekDaysRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 8,
+  },
+  calWeekDayText: {
+    width: 38,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  calDaysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 14,
+  },
+  calDayBox: {
+    width: '14.28%',
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 19,
+  },
+  calDayBoxSelected: {},
+  calDayText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  confirmCalDateBtn: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmCalDateBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
   },
 });
 

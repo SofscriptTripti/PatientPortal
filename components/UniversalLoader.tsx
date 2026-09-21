@@ -9,6 +9,7 @@ import {
   Easing,
 } from 'react-native';
 import IMAGES from './imageAssets';
+import { useTheme } from './ThemeContext';
 
 export interface UniversalLoaderProps {
   visible?: boolean;
@@ -23,6 +24,7 @@ export const UniversalLoader: React.FC<UniversalLoaderProps> = ({
   subtitle = 'Processing your request securely',
   overlay = true,
 }) => {
+  const { isDark, colors } = useTheme();
   // Pulse & Rotation animations
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rippleAnim = useRef(new Animated.Value(0.85)).current;
@@ -97,7 +99,7 @@ export const UniversalLoader: React.FC<UniversalLoaderProps> = ({
   });
 
   const content = (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#EDF2F7', shadowColor: colors.primary }]}>
       {/* Icon with Glowing Pulse & Rotating Medical Accent Ring */}
       <View style={styles.iconContainer}>
         {/* Radiating Teal Ripple */}
@@ -105,6 +107,7 @@ export const UniversalLoader: React.FC<UniversalLoaderProps> = ({
           style={[
             styles.rippleCircle,
             {
+              backgroundColor: colors.primaryLight,
               transform: [{ scale: rippleAnim }],
               opacity: rippleOpacity,
             },
@@ -116,6 +119,8 @@ export const UniversalLoader: React.FC<UniversalLoaderProps> = ({
           style={[
             styles.spinnerRing,
             {
+              borderColor: colors.primary,
+              borderRightColor: colors.accent,
               transform: [{ rotate: spinInterpolation }],
             },
           ]}
@@ -126,6 +131,8 @@ export const UniversalLoader: React.FC<UniversalLoaderProps> = ({
           style={[
             styles.logoBadge,
             {
+              backgroundColor: isDark ? colors.surface : '#FFFFFF',
+              borderColor: colors.border,
               transform: [{ scale: pulseAnim }],
             },
           ]}
@@ -140,14 +147,14 @@ export const UniversalLoader: React.FC<UniversalLoaderProps> = ({
       </View>
 
       {/* Message & Subtitle */}
-      <Text style={styles.messageText}>{message}</Text>
-      {subtitle ? <Text style={styles.subtitleText}>{subtitle}</Text> : null}
+      <Text style={[styles.messageText, { color: colors.textPrimary }]}>{message}</Text>
+      {subtitle ? <Text style={[styles.subtitleText, { color: colors.textSecondary }]}>{subtitle}</Text> : null}
 
       {/* Animated Medical Accent Progress Dots */}
       <View style={styles.dotsRow}>
-        <View style={[styles.dot, { backgroundColor: '#0284C7', opacity: 0.5 }]} />
-        <View style={[styles.dot, { backgroundColor: '#02AAB0', transform: [{ scale: 1.3 }] }]} />
-        <View style={[styles.dot, { backgroundColor: '#00A896', opacity: 0.5 }]} />
+        <View style={[styles.dot, { backgroundColor: colors.primary, opacity: 0.5 }]} />
+        <View style={[styles.dot, { backgroundColor: colors.accent, transform: [{ scale: 1.3 }] }]} />
+        <View style={[styles.dot, { backgroundColor: colors.primary, opacity: 0.5 }]} />
       </View>
     </View>
   );

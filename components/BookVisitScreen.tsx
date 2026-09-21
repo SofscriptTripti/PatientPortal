@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,9 @@ import {
   Alert,
   useWindowDimensions,
   BackHandler,
+  Animated,
+  Easing,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
@@ -18,11 +21,14 @@ import { INITIAL_PATIENTS } from './mockData';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
 import IMAGES from './imageAssets';
+import { getActiveMember } from './accountManager';
 
 interface BookVisitScreenProps {
   userSession: UserSession;
   onBack: () => void;
   onBookingSuccess?: () => void;
+  onAddHealthPoints?: (points: number) => void;
+  skipPatientSelection?: boolean;
 }
 
 // 8 Specialty departments requested
@@ -56,6 +62,7 @@ interface PatientReview {
 
 interface DoctorItem {
   id: string;
+  deptId?: string;
   name: string;
   specialty: string;
   qualifications: string;
@@ -73,6 +80,7 @@ interface DoctorItem {
 const DOCTORS_LIST: DoctorItem[] = [
   {
     id: 'doc-1',
+    deptId: '4', // Pediatrics
     name: 'Dr. Priya Nair',
     specialty: 'Senior Pediatrician',
     qualifications: 'MBBS, MD (Pediatrics)',
@@ -110,6 +118,7 @@ const DOCTORS_LIST: DoctorItem[] = [
   },
   {
     id: 'doc-2',
+    deptId: '3', // General Medicine
     name: 'Dr. Chakravarthi',
     specialty: 'Chief Consultant Physician',
     qualifications: 'MBBS, MD, FRCP (London)',
@@ -140,6 +149,7 @@ const DOCTORS_LIST: DoctorItem[] = [
   },
   {
     id: 'doc-3',
+    deptId: '4', // Pediatrics
     name: 'Dr. Ananya Roy',
     specialty: 'Associate Child Specialist',
     qualifications: 'MBBS, DNB (Pediatrics)',
@@ -168,12 +178,85 @@ const DOCTORS_LIST: DoctorItem[] = [
       },
     ],
   },
+  {
+    id: 'doc-4',
+    deptId: '1', // Cardiology
+    name: 'Dr. Rajesh Sharma',
+    specialty: 'Senior Interventional Cardiologist',
+    qualifications: 'MBBS, MD, DM (Cardiology)',
+    unit: 'Unit 1 · 09:30 AM – 01:30 PM',
+    rating: '4.9',
+    reviewsCount: 520,
+    fee: 800,
+    experience: '18 Yrs Exp',
+    avatar: IMAGES.avatarDoctor,
+    about: 'Dr. Rajesh Sharma is a leading Interventional Cardiologist with 18 years of expertise in angioplasty, pacemaker implantation, and cardiac preventive care.',
+    languages: ['English', 'Hindi', 'Punjabi'],
+    reviews: [
+      {
+        id: 'rev-8',
+        patientName: 'Ramesh Gupta',
+        rating: 5,
+        date: '11 Sep 2026',
+        comment: 'Outstanding cardiologist! Explained my heart condition patiently and guided me through recovery.',
+      },
+    ],
+  },
+  {
+    id: 'doc-5',
+    deptId: '2', // Orthopedics
+    name: 'Dr. Sunita Reddy',
+    specialty: 'Senior Joint Replacement Surgeon',
+    qualifications: 'MBBS, MS (Orthopedics)',
+    unit: 'Unit 2 · 11:00 AM – 03:00 PM',
+    rating: '4.8',
+    reviewsCount: 380,
+    fee: 700,
+    experience: '14 Yrs Exp',
+    avatar: IMAGES.avatarDoctorFemale,
+    about: 'Dr. Sunita Reddy is a renowned Orthopedic Surgeon specializing in knee & hip replacements, arthroscopy, and sports injury management.',
+    languages: ['English', 'Hindi', 'Telugu'],
+    reviews: [
+      {
+        id: 'rev-9',
+        patientName: 'Kavita Joshi',
+        rating: 5,
+        date: '09 Sep 2026',
+        comment: 'Dr. Sunita performed my mother knee surgery smoothly. Exceptional care and attention.',
+      },
+    ],
+  },
+  {
+    id: 'doc-6',
+    deptId: '6', // Dermatology
+    name: 'Dr. Meera Kapoor',
+    specialty: 'Consultant Dermatologist & Cosmetologist',
+    qualifications: 'MBBS, MD (Dermatology)',
+    unit: 'Unit 1 · 10:00 AM – 02:00 PM',
+    rating: '4.9',
+    reviewsCount: 310,
+    fee: 650,
+    experience: '11 Yrs Exp',
+    avatar: IMAGES.avatarDoctorFemale,
+    about: 'Dr. Meera Kapoor is a specialist in clinical dermatology, skin rejuvenation, acne treatment, and laser therapies.',
+    languages: ['English', 'Hindi'],
+    reviews: [
+      {
+        id: 'rev-10',
+        patientName: 'Alok Roy',
+        rating: 5,
+        date: '13 Sep 2026',
+        comment: 'Very effective treatment for skin allergies. Highly recommended dermatologist!',
+      },
+    ],
+  },
 ];
 
 // Available dates - dynamically computed 7 days Sun to Sat
 interface DateOption {
   dateStr: string;
   dayName: string;
+  fullDayName: string;
   dayNum: string;
   month: string;
   fullDate: Date;
@@ -195,7 +278,8 @@ const getWeekDays = (refDate: Date = new Date(2026, 8, 17)): DateOption[] => {
 
   const days: DateOption[] = [];
   const todayStr = '17-09-2026';
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const shortDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const fullDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   for (let i = 0; i < 7; i++) {
@@ -209,7 +293,8 @@ const getWeekDays = (refDate: Date = new Date(2026, 8, 17)): DateOption[] => {
 
     days.push({
       dateStr,
-      dayName: dayNames[i],
+      dayName: shortDayNames[i],
+      fullDayName: fullDayNames[i],
       dayNum: dd,
       month: monthNames[d.getMonth()],
       fullDate: d,
@@ -240,25 +325,39 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
   userSession,
   onBack,
   onBookingSuccess,
+  onAddHealthPoints,
+  skipPatientSelection = false,
 }) => {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 600 || height >= 950;
   const { isDark, colors } = useTheme();
 
+  // Active member dynamically from account manager
+  const activeMember = getActiveMember();
+
   // Active step: 1 = Patient, 2 = Department, 3 = Doctor & Slot, 4 = Payment & Dues
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(skipPatientSelection ? 2 : 1);
 
   // Reference date for 1-week Sunday to Saturday generation (defaults to 17 Sep 2026)
   const [refDate, setRefDate] = useState<Date>(new Date(2026, 8, 17));
   const weekDays = getWeekDays(refDate);
 
-  // Selection state (pre-selected by default to Self - Rathi Vijay Sharma)
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('1'); // Self (Rathi Vijay Sharma)
+  // Selection state (pre-selected to active selected member)
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(activeMember ? activeMember.id : '1');
+
+  useEffect(() => {
+    const active = getActiveMember();
+    if (active) {
+      setSelectedPatientId(active.id);
+    }
+  }, [userSession]);
   const [selectedDeptId, setSelectedDeptId] = useState<string>('4'); // Pediatrics
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>('doc-1'); // Dr. Priya Nair
+  const [doctorSearchQuery, setDoctorSearchQuery] = useState<string>('');
+  const [searchedDoctor, setSearchedDoctor] = useState<DoctorItem | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('17-09-2026');
-  const [selectedDay, setSelectedDay] = useState<string>('Thu');
+  const [selectedDay, setSelectedDay] = useState<string>('Thursday');
   const [selectedSlot, setSelectedSlot] = useState<string>('10:20 AM');
   const [duesDismissed, setDuesDismissed] = useState<boolean>(false);
   const [paymentOption, setPaymentOption] = useState<'pay_now' | 'pay_later'>('pay_later');
@@ -274,12 +373,53 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
 
   // Confirmation modal & Loader
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
+  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [selectedMethod, setSelectedMethod] = useState<'UPI' | 'CARD' | 'NETBANKING'>('UPI');
+  const [selectedUpiApp, setSelectedUpiApp] = useState<'GPAY' | 'PHONEPE' | 'PAYTM'>('GPAY');
   const [generatedToken, setGeneratedToken] = useState<string>('TK-2026-0917-042');
   const [loaderState, setLoaderState] = useState<{
     visible: boolean;
     message?: string;
     subtitle?: string;
   }>({ visible: false });
+
+  // Animation refs for Victory Celebration Blast (Pay Now)
+  const coinFloatAnim = useRef(new Animated.Value(0)).current;
+  const trophyScaleAnim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    if (showSuccessModal && paymentOption === 'pay_now') {
+      trophyScaleAnim.setValue(0.3);
+      coinFloatAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(trophyScaleAnim, {
+          toValue: 1,
+          friction: 5,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(coinFloatAnim, {
+              toValue: -12,
+              duration: 1200,
+              easing: Easing.inOut(Easing.quad),
+              useNativeDriver: true,
+            }),
+            Animated.timing(coinFloatAnim, {
+              toValue: 0,
+              duration: 1200,
+              easing: Easing.inOut(Easing.quad),
+              useNativeDriver: true,
+            }),
+          ])
+        ),
+      ]).start();
+      if (onAddHealthPoints) {
+        onAddHealthPoints(50);
+      }
+    }
+  }, [showSuccessModal, paymentOption]);
 
   // Get selected patient object (defaults to Self)
   const selectedPatient =
@@ -322,7 +462,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
       setShowCalendarModal(false);
       return;
     }
-    if (currentStep > 1) {
+    if (currentStep > 2) {
       setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3 | 4);
     } else {
       onBack();
@@ -362,6 +502,15 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
   }, [showDoctorModal, showCalendarModal, showSuccessModal, currentStep, onBack, onBookingSuccess]);
 
   const handleConfirmBooking = () => {
+    if (paymentOption === 'pay_now') {
+      setShowPaymentModal(true);
+    } else {
+      executeFinalBooking();
+    }
+  };
+
+  const executeFinalBooking = () => {
+    setShowPaymentModal(false);
     setLoaderState({
       visible: true,
       message: 'Confirming Appointment...',
@@ -411,7 +560,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <AppIcon name="back" size={20} color="#0083B0" />
+              <AppIcon name="back" size={20} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -424,8 +573,8 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
 
           {/* Right side: Step Pill Indicator */}
           <View style={[styles.headerSideGroup, styles.headerRightGroup, isTablet && { width: 104 }]}>
-            <View style={[styles.stepBadge, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE', borderColor: isDark ? colors.border : '#BAE6FD' }]}>
-              <Text style={[styles.stepBadgeText, { color: isDark ? colors.accent : '#0083B0' }]}>Step {currentStep} of 4</Text>
+            <View style={[styles.stepBadge, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight, borderColor: isDark ? colors.border : colors.primaryLight }]}>
+              <Text style={[styles.stepBadgeText, { color: isDark ? colors.accent : colors.primary }]}>Step {currentStep} of 4</Text>
             </View>
           </View>
         </View>
@@ -438,7 +587,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
               style={[
                 styles.progressSegment,
                 stepNumber <= currentStep
-                  ? styles.progressSegmentActive
+                  ? [styles.progressSegmentActive, { backgroundColor: colors.primary }]
                   : [styles.progressSegmentInactive, { backgroundColor: colors.border }],
               ]}
             />
@@ -464,7 +613,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
           {currentStep === 1 && (
             <View>
               <View style={styles.stepHeader}>
-                <Text style={styles.stepSubTitle}>STEP 1</Text>
+                <Text style={[styles.stepSubTitle, { color: colors.primary }]}>STEP 1</Text>
                 <Text style={[styles.stepMainTitle, { color: colors.textPrimary }]}>Who is this visit for?</Text>
                 <Text style={[styles.stepDescription, { color: colors.textSecondary }]}>
                   Select a family member from your registered health records.
@@ -483,12 +632,12 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                           backgroundColor: colors.surface,
                           borderColor: colors.border,
                         },
-                        isSelected && (isDark ? { borderColor: '#38BDF8', backgroundColor: '#1E3A5F' } : styles.patientCardSelected),
+                        isSelected && (isDark ? { borderColor: colors.accent, backgroundColor: colors.surfaceVariant } : [styles.patientCardSelected, { borderColor: colors.primary, backgroundColor: colors.primaryLight }]),
                       ]}
                       onPress={() => setSelectedPatientId(patient.id)}
                       activeOpacity={0.8}
                     >
-                      <View style={[styles.patientAvatarBox, { backgroundColor: isDark ? colors.surfaceVariant : '#DEF0FD' }]}>
+                      <View style={[styles.patientAvatarBox, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight }]}>
                         <Image
                           source={getPatientAvatar(patient)}
                           style={styles.patientAvatarImg}
@@ -503,14 +652,14 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                             style={[
                               styles.relationBadge,
                               { backgroundColor: colors.surfaceVariant },
-                              isSelected && (isDark ? { backgroundColor: '#162032' } : styles.relationBadgeSelected),
+                              isSelected && (isDark ? { backgroundColor: colors.surfaceVariant } : [styles.relationBadgeSelected, { backgroundColor: colors.primaryLight }]),
                             ]}
                           >
                             <Text
                               style={[
                                 styles.relationBadgeText,
                                 { color: colors.textSecondary },
-                                isSelected && (isDark ? { color: '#38BDF8' } : styles.relationBadgeTextSelected),
+                                isSelected && (isDark ? { color: colors.accent } : [styles.relationBadgeTextSelected, { color: colors.primary }]),
                               ]}
                             >
                               {patient.relation}
@@ -528,10 +677,10 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                         style={[
                           styles.radioCircle,
                           { borderColor: colors.border },
-                          isSelected && styles.radioCircleSelected,
+                          isSelected && [styles.radioCircleSelected, { borderColor: colors.primary }],
                         ]}
                       >
-                        {isSelected && <View style={styles.radioDot} />}
+                        {isSelected && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
                       </View>
                     </TouchableOpacity>
                   );
@@ -539,16 +688,16 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
               </View>
 
               {/* Add Member helper banner */}
-              <View style={[styles.addMemberHintBanner, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE', borderColor: isDark ? colors.border : '#BAE6FD' }]}>
-                <AppIcon name="info" size={16} color={isDark ? colors.accent : '#0083B0'} />
-                <Text style={[styles.addMemberHintText, { color: isDark ? colors.accent : '#0369A1' }]}>
+              <View style={[styles.addMemberHintBanner, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight, borderColor: isDark ? colors.border : colors.primaryLight }]}>
+                <AppIcon name="info" size={16} color={isDark ? colors.accent : colors.primary} />
+                <Text style={[styles.addMemberHintText, { color: isDark ? colors.accent : colors.primary }]}>
                   Need to book for another family member? You can add them from the Member list section anytime.
                 </Text>
               </View>
 
               {/* Bottom Continue Action */}
               <TouchableOpacity
-                style={styles.continueButton}
+                style={[styles.continueButton, { backgroundColor: colors.primary }]}
                 onPress={() => setCurrentStep(2)}
                 activeOpacity={0.88}
               >
@@ -559,21 +708,118 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
           )}
 
           {/* ========================================================
-              STEP 2: SELECT SPECIALTY / DEPARTMENT
+              STEP 2: SELECT SPECIALTY / DEPARTMENT & DOCTOR SEARCH
              ======================================================== */}
           {currentStep === 2 && (
             <View>
               <View style={styles.stepHeader}>
-                <Text style={styles.stepSubTitle}>STEP 2</Text>
-                <Text style={[styles.stepMainTitle, { color: colors.textPrimary }]}>Select Department</Text>
+                <Text style={[styles.stepSubTitle, { color: colors.primary }]}>STEP 2</Text>
+                <Text style={[styles.stepMainTitle, { color: colors.textPrimary }]}>Select Department or Search Doctor</Text>
                 <Text style={[styles.stepDescription, { color: colors.textSecondary }]}>
                   Booking consultation for{' '}
-                  <Text style={{ fontWeight: '700', color: isDark ? colors.accent : '#0083B0' }}>
+                  <Text style={{ fontWeight: '700', color: isDark ? colors.accent : colors.primary }}>
                     {selectedPatient.name}
                   </Text>
-                  . Choose clinical specialty:
+                  . Search doctor by name or choose clinical specialty:
                 </Text>
               </View>
+
+              {/* SEARCH DOCTOR BY NAME INPUT */}
+              <View style={styles.searchDoctorWrapper}>
+                <Text style={[styles.searchDoctorLabel, { color: colors.textPrimary }]}>
+                  Search Doctor by Name
+                </Text>
+                <View
+                  style={[
+                    styles.searchDoctorInputRow,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: doctorSearchQuery ? colors.primary : colors.border,
+                    },
+                  ]}
+                >
+                  <AppIcon name="search" size={18} color={colors.primary} />
+                  <TextInput
+                    style={[styles.searchDoctorTextInput, { color: colors.textPrimary }]}
+                    placeholder="Search doctor by name (e.g. Dr. Priya, Dr. Chakravarthi)..."
+                    placeholderTextColor={colors.textSecondary || '#94A3B8'}
+                    value={doctorSearchQuery}
+                    onChangeText={setDoctorSearchQuery}
+                  />
+                  {doctorSearchQuery ? (
+                    <TouchableOpacity
+                      onPress={() => setDoctorSearchQuery('')}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <AppIcon name="close" size={16} color={colors.textSecondary || '#94A3B8'} />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+
+              {/* LIVE SEARCH DOCTOR RESULTS */}
+              {doctorSearchQuery.trim() !== '' && (() => {
+                const queryLower = doctorSearchQuery.toLowerCase().trim();
+                const matchedDoctors = DOCTORS_LIST.filter(
+                  (doc) => doc.name.toLowerCase().includes(queryLower) || doc.specialty.toLowerCase().includes(queryLower)
+                );
+
+                return (
+                  <View style={[styles.searchResultsCardContainer, { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC', borderColor: colors.border }]}>
+                    <View style={styles.searchResultsHeaderRow}>
+                      <Text style={[styles.searchResultsTitleText, { color: colors.textPrimary }]}>
+                        Matching Doctors ({matchedDoctors.length})
+                      </Text>
+                      <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: '500' }}>
+                        Tap to select slot directly
+                      </Text>
+                    </View>
+
+                    {matchedDoctors.length === 0 ? (
+                      <View style={styles.searchEmptyStateBox}>
+                        <AppIcon name="user" size={24} color={colors.textSecondary || '#94A3B8'} />
+                        <Text style={[styles.searchEmptyStateText, { color: colors.textSecondary }]}>
+                          No doctor found matching "{doctorSearchQuery}"
+                        </Text>
+                      </View>
+                    ) : (
+                      matchedDoctors.map((doc) => (
+                        <TouchableOpacity
+                          key={doc.id}
+                          style={[styles.searchResultItemCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                          onPress={() => {
+                            setSelectedDoctorId(doc.id);
+                            setSearchedDoctor(doc);
+                            if (doc.deptId) {
+                              setSelectedDeptId(doc.deptId);
+                            }
+                            setDoctorSearchQuery('');
+                            setCurrentStep(3); // Immediate navigation to Slot Selection!
+                          }}
+                          activeOpacity={0.8}
+                        >
+                          <Image source={doc.avatar} style={styles.searchResultAvatar} resizeMode="cover" />
+                          <View style={{ flex: 1, marginLeft: 10 }}>
+                            <Text style={[styles.searchResultDoctorName, { color: colors.textPrimary }]}>{doc.name}</Text>
+                            <Text style={[styles.searchResultSpecText, { color: colors.textSecondary }]}>
+                              {doc.specialty} • {doc.experience}
+                            </Text>
+                            <Text style={[styles.searchResultUnitText, { color: colors.textSecondary }]}>{doc.unit}</Text>
+                          </View>
+                          <View style={{ alignItems: 'flex-end', justifyContent: 'center', gap: 6 }}>
+                            <View style={[styles.searchResultFeeBadge, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight }]}>
+                              <Text style={[styles.searchResultFeeText, { color: colors.primary }]}>₹{doc.fee}</Text>
+                            </View>
+                            <View style={[styles.selectSlotBtn, { backgroundColor: colors.primary }]}>
+                              <Text style={styles.selectSlotBtnText}>Select Slot ›</Text>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      ))
+                    )}
+                  </View>
+                );
+              })()}
 
               <View style={styles.deptGrid}>
                 {DEPARTMENTS.map((dept) => {
@@ -587,22 +833,25 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                           backgroundColor: colors.surface,
                           borderColor: colors.border,
                         },
-                        isSelected && (isDark ? { borderColor: '#38BDF8', backgroundColor: '#1E3A5F' } : styles.deptCardSelected),
+                        isSelected && (isDark ? { borderColor: colors.accent, backgroundColor: colors.surfaceVariant } : [styles.deptCardSelected, { borderColor: colors.primary, backgroundColor: colors.primaryLight }]),
                       ]}
-                      onPress={() => setSelectedDeptId(dept.id)}
+                      onPress={() => {
+                        setSelectedDeptId(dept.id);
+                        setSearchedDoctor(null);
+                      }}
                       activeOpacity={0.8}
                     >
                       <View
                         style={[
                           styles.deptIconBox,
-                          { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE' },
-                          isSelected && styles.deptIconBoxSelected,
+                          { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight },
+                          isSelected && [styles.deptIconBoxSelected, { backgroundColor: colors.primary }],
                         ]}
                       >
                         <AppIcon
                           name={dept.icon}
                           size={24}
-                          color={isSelected ? '#FFFFFF' : (isDark ? colors.accent : '#0083B0')}
+                          color={isSelected ? '#FFFFFF' : (isDark ? colors.accent : colors.primary)}
                         />
                       </View>
 
@@ -610,7 +859,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                         style={[
                           styles.deptNameText,
                           { color: colors.textPrimary },
-                          isSelected && (isDark ? { color: '#38BDF8' } : styles.deptNameTextSelected),
+                          isSelected && (isDark ? { color: colors.accent } : [styles.deptNameTextSelected, { color: colors.primary }]),
                         ]}
                         numberOfLines={1}
                       >
@@ -623,14 +872,14 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                         style={[
                           styles.deptCountPill,
                           { backgroundColor: colors.surfaceVariant },
-                          isSelected && (isDark ? { backgroundColor: '#162032' } : styles.deptCountPillSelected),
+                          isSelected && (isDark ? { backgroundColor: colors.surfaceVariant } : [styles.deptCountPillSelected, { backgroundColor: colors.primaryLight }]),
                         ]}
                       >
                         <Text
                           style={[
                             styles.deptCountText,
                             { color: colors.textSecondary },
-                            isSelected && (isDark ? { color: '#38BDF8' } : styles.deptCountTextSelected),
+                            isSelected && (isDark ? { color: colors.accent } : [styles.deptCountTextSelected, { color: colors.primary }]),
                           ]}
                         >
                           {dept.doctorCount} Doctors
@@ -643,8 +892,11 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
 
               {/* Bottom Continue Action */}
               <TouchableOpacity
-                style={styles.continueButton}
-                onPress={() => setCurrentStep(3)}
+                style={[styles.continueButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setSearchedDoctor(null);
+                  setCurrentStep(3);
+                }}
                 activeOpacity={0.88}
               >
                 <Text style={styles.continueButtonText}>Continue to Doctor & Slot</Text>
@@ -656,140 +908,169 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
           {/* ========================================================
               STEP 3: SELECT DOCTOR & SLOT
              ======================================================== */}
-          {currentStep === 3 && (
-            <View>
-              {/* SLOT Header */}
-              <View style={styles.slotHeaderRow}>
-                <Text style={[styles.slotHeadingText, { color: colors.textSecondary }]}>SLOT SELECTION</Text>
-                <Text style={[styles.slotSubHeadingText, { color: colors.textSecondary }]}>
-                  Dept: <Text style={{ fontWeight: '700', color: isDark ? colors.accent : '#0083B0' }}>{selectedDept.name}</Text>
-                </Text>
-              </View>
+          {currentStep === 3 && (() => {
+            const deptDoctors = DOCTORS_LIST.filter((d) => d.deptId === selectedDeptId);
+            const displayedDoctors = searchedDoctor
+              ? [searchedDoctor]
+              : (deptDoctors.length > 0 ? deptDoctors : DOCTORS_LIST);
 
-              {/* 1. SECTION: CHOOSE DOCTOR */}
-              <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionTitleText, { color: colors.textPrimary }]}>Select Doctor</Text>
-                <Text style={[styles.sectionBadgeText, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE', color: isDark ? colors.accent : '#0083B0' }]}>3 Available</Text>
-              </View>
+            return (
+              <View>
+                {/* SLOT Header */}
+                <View style={styles.slotHeaderRow}>
+                  <Text style={[styles.slotHeadingText, { color: colors.textSecondary }]}>SLOT SELECTION</Text>
+                  <Text style={[styles.slotSubHeadingText, { color: colors.textSecondary }]}>
+                    Dept: <Text style={{ fontWeight: '700', color: isDark ? colors.accent : colors.primary }}>{selectedDept.name}</Text>
+                  </Text>
+                </View>
 
-              <View style={styles.doctorsListContainer}>
-                {DOCTORS_LIST.map((doctor) => {
-                  const isDoctorSelected = selectedDoctorId === doctor.id;
-                  return (
+                {/* SEARCHED DOCTOR BANNER NOTICE */}
+                {searchedDoctor ? (
+                  <View style={[styles.searchedDoctorNoticeBanner, { backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF', borderColor: isDark ? colors.border : '#BAE6FD' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 }}>
+                      <AppIcon name="user" size={16} color={colors.primary} />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textPrimary, flex: 1 }}>
+                        Selected via Search: <Text style={{ fontWeight: '700', color: colors.primary }}>{searchedDoctor.name}</Text>
+                      </Text>
+                    </View>
                     <TouchableOpacity
-                      key={doctor.id}
-                      style={[
-                        styles.doctorSelectCard,
-                        {
-                          backgroundColor: colors.surface,
-                          borderColor: colors.border,
-                        },
-                        isDoctorSelected && (isDark ? { borderColor: '#38BDF8', backgroundColor: '#1E3A5F' } : styles.doctorSelectCardActive),
-                      ]}
-                      onPress={() => {
-                        setSelectedDoctorId(doctor.id);
-                        setActiveModalDoctor(doctor);
-                        setShowDoctorModal(true);
-                      }}
-                      activeOpacity={0.88}
+                      style={[styles.viewAllDoctorsBtn, { backgroundColor: isDark ? colors.surface : colors.primaryLight }]}
+                      onPress={() => setSearchedDoctor(null)}
+                      activeOpacity={0.75}
                     >
-                      {/* Doctor Avatar - Clickable with Info Badge */}
-                      <View style={[styles.doctorAvatarBox, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE' }]}>
-                        <Image
-                          source={doctor.avatar}
-                          style={styles.doctorAvatarImg}
-                          resizeMode="cover"
-                        />
-                        <View style={styles.doctorVerifiedBadge}>
-                          <AppIcon name="check" size={8} color="#FFFFFF" />
-                        </View>
-                        <View style={styles.doctorInfoCornerBadge}>
-                          <AppIcon name="info" size={9} color="#FFFFFF" />
-                        </View>
-                      </View>
-
-                      <View style={styles.doctorDetailsCol}>
-                        <View style={styles.doctorNameRatingRow}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Text
-                              style={[
-                                styles.doctorNameText,
-                                { color: colors.textPrimary },
-                                isDoctorSelected && (isDark ? { color: '#38BDF8' } : styles.doctorNameTextActive),
-                              ]}
-                            >
-                              {doctor.name}
-                            </Text>
-                            <AppIcon name="info" size={13} color={isDark ? colors.accent : '#0083B0'} />
-                          </View>
-
-                          {/* Rating Pill */}
-                          <View style={styles.doctorRatingPill}>
-                            <AppIcon name="star" size={11} color="#EAB308" />
-                            <Text style={[styles.doctorRatingText, { color: colors.textPrimary }]}>{doctor.rating}</Text>
-                            <Text style={[styles.doctorReviewsText, { color: colors.textSecondary }]}>({doctor.reviewsCount})</Text>
-                          </View>
-                        </View>
-
-                        <Text style={[styles.doctorSpecText, { color: colors.textSecondary }]}>
-                          {doctor.specialty} • {doctor.qualifications}
-                        </Text>
-
-                        <Text style={[styles.doctorUnitText, { color: colors.textSecondary }]}>{doctor.unit}</Text>
-
-                        <View style={styles.doctorPillsRow}>
-                          <View
-                            style={[
-                              styles.doctorFeeBadge,
-                              { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE' },
-                              isDoctorSelected && styles.doctorFeeBadgeActive,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.doctorFeeText,
-                                isDoctorSelected && styles.doctorFeeTextActive,
-                              ]}
-                            >
-                              ₹{doctor.fee}
-                            </Text>
-                          </View>
-                          <View style={[styles.doctorExpBadge, { backgroundColor: colors.surfaceVariant }]}>
-                            <Text style={[styles.doctorExpText, { color: colors.textSecondary }]}>{doctor.experience}</Text>
-                          </View>
-
-                          {/* Prominent View Profile & Reviews Button */}
-                          <TouchableOpacity
-                            style={[styles.viewProfileBtn, { backgroundColor: isDark ? '#1E293B' : '#E0F2FE', borderColor: isDark ? '#38BDF8' : '#BAE6FD', borderWidth: 1 }]}
-                            onPress={() => {
-                              setSelectedDoctorId(doctor.id);
-                              setActiveModalDoctor(doctor);
-                              setShowDoctorModal(true);
-                            }}
-                            activeOpacity={0.75}
-                          >
-                            <AppIcon name="info" size={11} color={isDark ? '#38BDF8' : '#0083B0'} />
-                            <Text style={[styles.viewProfileBtnText, { color: isDark ? '#38BDF8' : '#0083B0' }]}>View Details & Reviews ›</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-
-                      {/* Radio Selection Indicator */}
-                      <View
-                        style={[
-                          styles.radioCircle,
-                          { borderColor: colors.border },
-                          isDoctorSelected && styles.radioCircleSelected,
-                        ]}
-                      >
-                        {isDoctorSelected && <View style={styles.radioDot} />}
-                      </View>
+                      <Text style={[styles.viewAllDoctorsBtnText, { color: colors.primary }]}>View All in Dept</Text>
                     </TouchableOpacity>
-                  );
-                })}
-              </View>
+                  </View>
+                ) : null}
 
-              {/* 2. SECTION: SELECT DATE */}
+                {/* 1. SECTION: CHOOSE DOCTOR */}
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={[styles.sectionTitleText, { color: colors.textPrimary }]}>
+                    {searchedDoctor ? 'Selected Doctor' : 'Select Doctor'}
+                  </Text>
+                  <Text style={[styles.sectionBadgeText, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight, color: isDark ? colors.accent : colors.primary }]}>
+                    {displayedDoctors.length} Available
+                  </Text>
+                </View>
+
+                <View style={styles.doctorsListContainer}>
+                  {displayedDoctors.map((doctor) => {
+                    const isDoctorSelected = selectedDoctorId === doctor.id;
+                    return (
+                      <TouchableOpacity
+                        key={doctor.id}
+                        style={[
+                          styles.doctorSelectCard,
+                          {
+                            backgroundColor: colors.surface,
+                            borderColor: colors.border,
+                          },
+                          isDoctorSelected && (isDark ? { borderColor: colors.accent, backgroundColor: colors.surfaceVariant } : [styles.doctorSelectCardActive, { borderColor: colors.primary, backgroundColor: colors.primaryLight }]),
+                        ]}
+                        onPress={() => {
+                          setSelectedDoctorId(doctor.id);
+                          setActiveModalDoctor(doctor);
+                          setShowDoctorModal(true);
+                        }}
+                        activeOpacity={0.88}
+                      >
+                        {/* Doctor Avatar - Clickable with Info Badge */}
+                        <View style={[styles.doctorAvatarBox, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight }]}>
+                          <Image
+                            source={doctor.avatar}
+                            style={styles.doctorAvatarImg}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.doctorVerifiedBadge}>
+                            <AppIcon name="check" size={8} color="#FFFFFF" />
+                          </View>
+                          <View style={styles.doctorInfoCornerBadge}>
+                            <AppIcon name="info" size={9} color="#FFFFFF" />
+                          </View>
+                        </View>
+
+                        <View style={styles.doctorDetailsCol}>
+                          <View style={styles.doctorNameRatingRow}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Text
+                                style={[
+                                  styles.doctorNameText,
+                                  { color: colors.textPrimary },
+                                  isDoctorSelected && (isDark ? { color: colors.accent } : [styles.doctorNameTextActive, { color: colors.primary }]),
+                                ]}
+                              >
+                                {doctor.name}
+                              </Text>
+                              <AppIcon name="info" size={13} color={isDark ? colors.accent : colors.primary} />
+                            </View>
+
+                            {/* Rating Pill */}
+                            <View style={styles.doctorRatingPill}>
+                              <AppIcon name="star" size={11} color="#EAB308" />
+                              <Text style={[styles.doctorRatingText, { color: colors.textPrimary }]}>{doctor.rating}</Text>
+                              <Text style={[styles.doctorReviewsText, { color: colors.textSecondary }]}>({doctor.reviewsCount})</Text>
+                            </View>
+                          </View>
+
+                          <Text style={[styles.doctorSpecText, { color: colors.textSecondary }]}>
+                            {doctor.specialty} • {doctor.qualifications}
+                          </Text>
+
+                          <Text style={[styles.doctorUnitText, { color: colors.textSecondary }]}>{doctor.unit}</Text>
+
+                          <View style={styles.doctorPillsRow}>
+                            <View
+                              style={[
+                                styles.doctorFeeBadge,
+                                { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight },
+                                isDoctorSelected && [styles.doctorFeeBadgeActive, { backgroundColor: colors.primary }],
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.doctorFeeText,
+                                  isDoctorSelected && styles.doctorFeeTextActive,
+                                ]}
+                              >
+                                ₹{doctor.fee}
+                              </Text>
+                            </View>
+                            <View style={[styles.doctorExpBadge, { backgroundColor: colors.surfaceVariant }]}>
+                              <Text style={[styles.doctorExpText, { color: colors.textSecondary }]}>{doctor.experience}</Text>
+                            </View>
+
+                            {/* Prominent View Profile & Reviews Button */}
+                            <TouchableOpacity
+                              style={[styles.viewProfileBtn, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight, borderColor: isDark ? colors.border : colors.primaryLight, borderWidth: 1 }]}
+                              onPress={() => {
+                                setSelectedDoctorId(doctor.id);
+                                setActiveModalDoctor(doctor);
+                                setShowDoctorModal(true);
+                              }}
+                              activeOpacity={0.75}
+                            >
+                              <AppIcon name="info" size={11} color={isDark ? colors.accent : colors.primary} />
+                              <Text style={[styles.viewProfileBtnText, { color: isDark ? colors.accent : colors.primary }]}>View Details & Reviews ›</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+
+                        {/* Radio Selection Indicator */}
+                        <View
+                          style={[
+                            styles.radioCircle,
+                            { borderColor: colors.border },
+                            isDoctorSelected && [styles.radioCircleSelected, { borderColor: colors.primary }],
+                          ]}
+                        >
+                          {isDoctorSelected && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* 2. SECTION: SELECT DATE */}
               <View style={[styles.sectionHeaderRow, { marginTop: 12 }]}>
                 <Text style={[styles.sectionTitleText, { color: colors.textPrimary }]}>Select Date</Text>
               </View>
@@ -816,7 +1097,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                         }}
                         activeOpacity={0.75}
                       >
-                        <Text style={[styles.stripNavArrowText, { color: isDark ? colors.accent : '#0083B0' }]}>‹</Text>
+                        <Text style={[styles.stripNavArrowText, { color: isDark ? colors.accent : colors.primary }]}>‹</Text>
                       </TouchableOpacity>
                     );
                   }
@@ -841,13 +1122,13 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                         style={[
                           styles.dateStripPill,
                           { backgroundColor: colors.surface, borderColor: colors.border },
-                          isDateSelected && styles.dateStripPillActive,
+                          isDateSelected && (isDark ? { borderColor: colors.accent, backgroundColor: colors.surfaceVariant } : [styles.dateStripPillActive, { borderColor: colors.primary, backgroundColor: colors.primaryLight }]),
                           isPast && styles.dateStripPillDisabled,
                         ]}
                         onPress={() => {
                           if (!isPast) {
                             setSelectedDate(item.dateStr);
-                            setSelectedDay(item.dayName);
+                            setSelectedDay(item.fullDayName);
                           }
                         }}
                         activeOpacity={isPast ? 1 : 0.8}
@@ -856,7 +1137,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                           <View
                             style={[
                               styles.dateTodayBadge,
-                              isDateSelected && styles.dateTodayBadgeActive,
+                              isDateSelected && [styles.dateTodayBadgeActive, { backgroundColor: colors.primary }],
                             ]}
                           >
                             <Text
@@ -880,7 +1161,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                           style={[
                             styles.dateStripDayName,
                             { color: colors.textSecondary },
-                            isDateSelected && styles.dateStripTextActive,
+                            isDateSelected && [styles.dateStripTextActive, { color: colors.primary }],
                             isPast && styles.dateStripTextDisabled,
                           ]}
                         >
@@ -890,7 +1171,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                           style={[
                             styles.dateStripDayNum,
                             { color: colors.textPrimary },
-                            isDateSelected && styles.dateStripTextActive,
+                            isDateSelected && [styles.dateStripTextActive, { color: colors.primary }],
                             isPast && styles.dateStripTextDisabled,
                           ]}
                         >
@@ -900,7 +1181,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                           style={[
                             styles.dateStripMonth,
                             { color: colors.textSecondary },
-                            isDateSelected && styles.dateStripTextActive,
+                            isDateSelected && [styles.dateStripTextActive, { color: colors.primary }],
                             isPast && styles.dateStripTextDisabled,
                           ]}
                         >
@@ -921,7 +1202,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                   }}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.stripNavArrowText, { color: isDark ? colors.accent : '#0083B0' }]}>›</Text>
+                  <Text style={[styles.stripNavArrowText, { color: isDark ? colors.accent : colors.primary }]}>›</Text>
                 </TouchableOpacity>
               </View>
 
@@ -940,15 +1221,15 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.datePickerText, { color: colors.textPrimary }]}>{selectedDate} ({selectedDay})</Text>
                 </View>
-                <View style={[styles.calendarIconCircle, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE' }]}>
-                  <AppIcon name="calendar" size={18} color={isDark ? colors.accent : '#0083B0'} />
+                <View style={[styles.calendarIconCircle, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight }]}>
+                  <AppIcon name="calendar" size={18} color={isDark ? colors.accent : colors.primary} />
                 </View>
               </TouchableOpacity>
 
               {/* 3. SECTION: SELECT TIME SLOT CATEGORIZED (MORNING, AFTERNOON, EVENING) */}
               <View style={[styles.sectionHeaderRow, { marginTop: 14 }]}>
                 <Text style={[styles.sectionTitleText, { color: colors.textPrimary }]}>Select Time Slot</Text>
-                <Text style={[styles.sectionBadgeText, { backgroundColor: isDark ? colors.surfaceVariant : '#E0F2FE', color: isDark ? colors.accent : '#0083B0' }]}>
+                <Text style={[styles.sectionBadgeText, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight, color: isDark ? colors.accent : colors.primary }]}>
                   Selected: {selectedSlot}
                 </Text>
               </View>
@@ -1071,7 +1352,8 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                 <AppIcon name="arrow-right" size={18} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
-          )}
+          );
+        })()}
 
           {/* ========================================================
               STEP 4: PAYMENT DETAILS & FAMILY DUES (REFERENCE IMAGE 2)
@@ -1105,7 +1387,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                 {/* Date/Time */}
                 <View style={styles.summaryRow}>
                   <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Date/Time</Text>
-                  <Text style={[styles.summaryValueAccent, { color: isDark ? colors.accent : '#0083B0' }]}>{selectedDate} {selectedSlot}</Text>
+                  <Text style={[styles.summaryValueAccent, { color: isDark ? colors.accent : colors.primary }]}>{selectedDate} {selectedSlot}</Text>
                 </View>
                 <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
 
@@ -1244,7 +1526,183 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
         </ScrollView>
 
         {/* ========================================================
-            SUCCESS CONFIRMATION MODAL
+            PAYMENT METHODS MODAL SHEET (UPI / CARDS / NET BANKING)
+           ======================================================== */}
+        <Modal
+          visible={showPaymentModal}
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={() => setShowPaymentModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View
+              style={[
+                styles.modalCard,
+                isTablet && { width: 480 },
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: isDark ? 1 : 0,
+                },
+              ]}
+            >
+              {/* Modal Header */}
+              <View style={styles.modalHeaderRow}>
+                <View>
+                  <Text style={[styles.modalHeaderTitle, { color: colors.textPrimary }]}>Select Payment Method</Text>
+                  <Text style={[styles.modalHeaderSub, { color: colors.textSecondary }]}>Healthcare Gateway</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setShowPaymentModal(false)}
+                  style={[styles.modalCloseBtn, { backgroundColor: colors.surfaceVariant }]}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <AppIcon name="close" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Amount to Pay Summary */}
+              <View
+                style={[
+                  styles.paySummaryBox,
+                  {
+                    backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight,
+                    borderColor: isDark ? colors.border : '#BAE6FD',
+                  },
+                ]}
+              >
+                <Text style={[styles.paySummaryLabel, { color: isDark ? colors.accent : '#0369A1' }]}>
+                  OPD Visit Fee for {selectedDoctor.name}
+                </Text>
+                <Text style={[styles.paySummaryAmount, { color: isDark ? colors.accent : colors.primary }]}>
+                  ₹{selectedDoctor.fee}
+                </Text>
+              </View>
+
+              {/* Payment Methods Selection */}
+              <Text style={[styles.methodSectionHeader, { color: colors.textSecondary }]}>CHOOSE PAYMENT METHOD</Text>
+
+              {/* Option 1: Instant UPI */}
+              <TouchableOpacity
+                style={[
+                  styles.methodOptionCard,
+                  {
+                    backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC',
+                    borderColor: isDark ? colors.border : '#E2E8F0',
+                  },
+                  selectedMethod === 'UPI' && (isDark ? { backgroundColor: '#1E3A5F', borderColor: '#38BDF8' } : styles.methodOptionCardSelected),
+                ]}
+                onPress={() => setSelectedMethod('UPI')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.methodRadioRow}>
+                  <View style={[styles.radioCircle, { borderColor: colors.border }, selectedMethod === 'UPI' && styles.radioCircleActive]}>
+                    {selectedMethod === 'UPI' && <View style={styles.radioInnerDot} />}
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.methodTitle, { color: colors.textPrimary }]}>UPI Instant Payment</Text>
+                    <Text style={[styles.methodSubtitle, { color: colors.textSecondary }]}>Google Pay, PhonePe, Paytm, or UPI ID</Text>
+                  </View>
+                  <AppIcon name="shield-check" size={20} color={isDark ? colors.accent : colors.primary} />
+                </View>
+
+                {/* Sub UPI apps selection */}
+                {selectedMethod === 'UPI' && (
+                  <View style={[styles.upiAppsRow, { borderTopColor: colors.border }]}>
+                    {(['GPAY', 'PHONEPE', 'PAYTM'] as const).map((app) => (
+                      <TouchableOpacity
+                        key={app}
+                        style={[
+                          styles.upiAppPill,
+                          { backgroundColor: colors.surface, borderColor: colors.border },
+                          selectedUpiApp === app && styles.upiAppPillActive,
+                        ]}
+                        onPress={() => setSelectedUpiApp(app)}
+                        activeOpacity={0.75}
+                      >
+                        <Text
+                          style={[
+                            styles.upiAppPillText,
+                            { color: colors.textSecondary },
+                            selectedUpiApp === app && styles.upiAppPillTextActive,
+                          ]}
+                        >
+                          {app === 'GPAY' ? 'Google Pay' : app === 'PHONEPE' ? 'PhonePe' : 'Paytm'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Option 2: Credit / Debit Card */}
+              <TouchableOpacity
+                style={[
+                  styles.methodOptionCard,
+                  {
+                    backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC',
+                    borderColor: isDark ? colors.border : '#E2E8F0',
+                  },
+                  selectedMethod === 'CARD' && (isDark ? { backgroundColor: '#1E3A5F', borderColor: '#38BDF8' } : styles.methodOptionCardSelected),
+                ]}
+                onPress={() => setSelectedMethod('CARD')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.methodRadioRow}>
+                  <View style={[styles.radioCircle, { borderColor: colors.border }, selectedMethod === 'CARD' && styles.radioCircleActive]}>
+                    {selectedMethod === 'CARD' && <View style={styles.radioInnerDot} />}
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.methodTitle, { color: colors.textPrimary }]}>Credit / Debit Card</Text>
+                    <Text style={[styles.methodSubtitle, { color: colors.textSecondary }]}>Visa, MasterCard, RuPay, Amex</Text>
+                  </View>
+                  <AppIcon name="wallet-outline" size={20} color={isDark ? colors.accent : colors.primary} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Option 3: Net Banking */}
+              <TouchableOpacity
+                style={[
+                  styles.methodOptionCard,
+                  {
+                    backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC',
+                    borderColor: isDark ? colors.border : '#E2E8F0',
+                  },
+                  selectedMethod === 'NETBANKING' && (isDark ? { backgroundColor: '#1E3A5F', borderColor: '#38BDF8' } : styles.methodOptionCardSelected),
+                ]}
+                onPress={() => setSelectedMethod('NETBANKING')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.methodRadioRow}>
+                  <View style={[styles.radioCircle, { borderColor: colors.border }, selectedMethod === 'NETBANKING' && styles.radioCircleActive]}>
+                    {selectedMethod === 'NETBANKING' && <View style={styles.radioInnerDot} />}
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.methodTitle, { color: colors.textPrimary }]}>Net Banking</Text>
+                    <Text style={[styles.methodSubtitle, { color: colors.textSecondary }]}>HDFC, SBI, ICICI, Axis & all major banks</Text>
+                  </View>
+                  <AppIcon name="hospital" size={20} color={isDark ? colors.accent : colors.primary} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Confirm and Pay Button */}
+              <TouchableOpacity
+                style={styles.confirmPayBtn}
+                onPress={executeFinalBooking}
+                activeOpacity={0.88}
+              >
+                <Text style={styles.confirmPayBtnText}>
+                  Pay ₹{selectedDoctor.fee} Securely
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ========================================================
+            SUCCESS CONFIRMATION MODAL (CLEAN TRANSPARENT VICTORY OVERLAY)
            ======================================================== */}
         <Modal
           visible={showSuccessModal}
@@ -1253,83 +1711,120 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
           onRequestClose={() => {
             setShowSuccessModal(false);
             if (onBookingSuccess) onBookingSuccess();
+            else onBack();
           }}
         >
-          <View style={styles.modalOverlay}>
-            <View
-              style={[
-                styles.successModalCard,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  borderWidth: isDark ? 1 : 0,
-                },
-              ]}
-            >
-              <View style={styles.successCheckCircle}>
-                <AppIcon name="check" size={32} color="#FFFFFF" />
-              </View>
-
-              <Text style={[styles.successModalTitle, { color: colors.textPrimary }]}>Appointment Confirmed!</Text>
-              <Text style={[styles.successModalSubtitle, { color: colors.textSecondary }]}>
-                Your hospital visit has been successfully booked with {selectedDoctor.name}.
-              </Text>
-
-              {/* Token Display Box */}
-              <View
-                style={[
-                  styles.tokenBox,
-                  isDark && { backgroundColor: '#064E3B', borderColor: '#059669' },
-                ]}
-              >
-                <Text style={[styles.tokenLabel, isDark && { color: '#34D399' }]}>HOSPITAL VISIT TOKEN</Text>
-                <Text style={[styles.tokenValue, isDark && { color: '#6EE7B7' }]}>{generatedToken}</Text>
-                <Text style={[styles.tokenRoomText, isDark && { color: '#A7F3D0' }]}>OPD Block B • Consultation Room 104</Text>
-              </View>
-
-              {/* Quick Details */}
-              <View
-                style={[
-                  styles.successDetailsCard,
-                  {
-                    backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC',
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <View style={styles.successDetailRow}>
-                  <Text style={[styles.successDetailLabel, { color: colors.textSecondary }]}>Patient:</Text>
-                  <Text style={[styles.successDetailVal, { color: colors.textPrimary }]}>{selectedPatient.name} ({selectedPatient.relation})</Text>
-                </View>
-                <View style={styles.successDetailRow}>
-                  <Text style={[styles.successDetailLabel, { color: colors.textSecondary }]}>Doctor:</Text>
-                  <Text style={[styles.successDetailVal, { color: colors.textPrimary }]}>{selectedDoctor.name}</Text>
-                </View>
-                <View style={styles.successDetailRow}>
-                  <Text style={[styles.successDetailLabel, { color: colors.textSecondary }]}>Slot:</Text>
-                  <Text style={[styles.successDetailVal, { color: colors.textPrimary }]}>{selectedDate} at {selectedSlot}</Text>
-                </View>
-                <View style={styles.successDetailRow}>
-                  <Text style={[styles.successDetailLabel, { color: colors.textSecondary }]}>Payment:</Text>
-                  <Text style={[styles.successDetailVal, { color: colors.textPrimary }]}>
-                    {paymentOption === 'pay_now' ? `Paid Online (₹${selectedDoctor.fee})` : 'Pay Later at Counter'}
-                  </Text>
-                </View>
-              </View>
-
+          {paymentOption === 'pay_now' ? (
+            /* PAY NOW ONLINE: TRANSPARENT CELEBRATION OVERLAY (AMAZON / FLIPKART STYLE) */
+            <View style={styles.transparentVictoryOverlay}>
+              {/* TOP RIGHT CLOSE CROSS ICON */}
               <TouchableOpacity
-                style={styles.successDoneBtn}
+                style={styles.victoryTopCloseBtn}
                 onPress={() => {
                   setShowSuccessModal(false);
                   if (onBookingSuccess) onBookingSuccess();
                   else onBack();
                 }}
-                activeOpacity={0.88}
+                activeOpacity={0.7}
+                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               >
-                <Text style={styles.successDoneBtnText}>Back to Dashboard</Text>
+                <AppIcon name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
+
+              <ScrollView
+                contentContainerStyle={styles.imageRefVictoryScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.imageRefHeaderTitle}>
+                  Woohoo! You Won +4 Health Points as a Reward! 🎉
+                </Text>
+
+                <Animated.View style={[styles.imageRefGraphicContainer, { transform: [{ scale: trophyScaleAnim }] }]}>
+                  <Image
+                    source={IMAGES.rewardBlastGif}
+                    fadeDuration={0}
+                    style={styles.imageRefGiftBoxArt}
+                    resizeMode="contain"
+                  />
+                </Animated.View>
+              </ScrollView>
             </View>
-          </View>
+          ) : (
+            /* PAY LATER: CLEAN SIMPLE BOOKING CONFIRMED SUMMARY */
+            <View style={styles.modalOverlay}>
+              <View
+                style={[
+                  styles.successModalCard,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    borderWidth: isDark ? 1 : 0,
+                  },
+                ]}
+              >
+                <View style={styles.successCheckCircle}>
+                  <AppIcon name="check" size={32} color="#FFFFFF" />
+                </View>
+
+                <Text style={[styles.successModalTitle, { color: colors.textPrimary }]}>Appointment Confirmed!</Text>
+                <Text style={[styles.successModalSubtitle, { color: colors.textSecondary }]}>
+                  Your hospital visit has been successfully booked with {selectedDoctor.name}.
+                </Text>
+
+                {/* Token Display Box */}
+                <View
+                  style={[
+                    styles.tokenBox,
+                    isDark && { backgroundColor: '#064E3B', borderColor: '#059669' },
+                  ]}
+                >
+                  <Text style={[styles.tokenLabel, isDark && { color: '#34D399' }]}>HOSPITAL VISIT TOKEN</Text>
+                  <Text style={[styles.tokenValue, isDark && { color: '#6EE7B7' }]}>{generatedToken}</Text>
+                  <Text style={[styles.tokenRoomText, isDark && { color: '#A7F3D0' }]}>OPD Block B • Consultation Room 104</Text>
+                </View>
+
+                {/* Quick Details */}
+                <View
+                  style={[
+                    styles.successDetailsCard,
+                    {
+                      backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC',
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <View style={styles.successDetailRow}>
+                    <Text style={[styles.successDetailLabel, { color: colors.textSecondary }]}>Patient:</Text>
+                    <Text style={[styles.successDetailVal, { color: colors.textPrimary }]}>{selectedPatient.name} ({selectedPatient.relation})</Text>
+                  </View>
+                  <View style={styles.successDetailRow}>
+                    <Text style={[styles.successDetailLabel, { color: colors.textSecondary }]}>Doctor:</Text>
+                    <Text style={[styles.successDetailVal, { color: colors.textPrimary }]}>{selectedDoctor.name}</Text>
+                  </View>
+                  <View style={styles.successDetailRow}>
+                    <Text style={[styles.successDetailLabel, { color: colors.textSecondary }]}>Slot:</Text>
+                    <Text style={[styles.successDetailVal, { color: colors.textPrimary }]}>{selectedDate} at {selectedSlot}</Text>
+                  </View>
+                  <View style={styles.successDetailRow}>
+                    <Text style={[styles.successDetailLabel, { color: colors.textSecondary }]}>Payment:</Text>
+                    <Text style={[styles.successDetailVal, { color: colors.textPrimary }]}>Pay Later at Counter</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.successDoneBtn}
+                  onPress={() => {
+                    setShowSuccessModal(false);
+                    if (onBookingSuccess) onBookingSuccess();
+                    else onBack();
+                  }}
+                  activeOpacity={0.88}
+                >
+                  <Text style={styles.successDoneBtnText}>OK</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </Modal>
 
         {/* ========================================================
@@ -1388,7 +1883,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
 
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.doctorModalName, { color: colors.textPrimary }]}>{activeModalDoctor.name}</Text>
-                      <Text style={[styles.doctorModalSpec, { color: isDark ? colors.accent : '#0083B0' }]}>
+                      <Text style={[styles.doctorModalSpec, { color: isDark ? colors.accent : colors.primary }]}>
                         {activeModalDoctor.specialty}
                       </Text>
                       <Text style={[styles.doctorModalQual, { color: colors.textSecondary }]}>
@@ -1416,7 +1911,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                     </View>
 
                     <View style={[styles.doctorStatCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      <Text style={[styles.doctorStatVal, { color: isDark ? colors.accent : '#0083B0' }]}>₹{activeModalDoctor.fee}</Text>
+                      <Text style={[styles.doctorStatVal, { color: isDark ? colors.accent : colors.primary }]}>₹{activeModalDoctor.fee}</Text>
                       <Text style={[styles.doctorStatLabel, { color: colors.textSecondary }]}>Fee</Text>
                     </View>
 
@@ -1445,7 +1940,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                   <View style={styles.modalSectionBox}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                       <Text style={[styles.modalSectionTitle, { color: colors.textPrimary }]}>Patient Reviews & Comments</Text>
-                      <Text style={[styles.reviewBadgeText, { color: isDark ? colors.accent : '#0083B0' }]}>
+                      <Text style={[styles.reviewBadgeText, { color: isDark ? colors.accent : colors.primary }]}>
                         {activeModalDoctor.reviews.length} Verified Reviews
                       </Text>
                     </View>
@@ -1538,16 +2033,16 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? colors.accent : '#0083B0' }}>‹</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? colors.accent : colors.primary }}>‹</Text>
                 </TouchableOpacity>
 
                 {/* Clickable Month & Year Title - opens quick picker */}
                 <TouchableOpacity
-                  style={[styles.monthYearClickableBtn, { backgroundColor: isDark ? colors.surfaceVariant : '#DEF0FD' }]}
+                  style={[styles.monthYearClickableBtn, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight }]}
                   onPress={() => setShowMonthYearPicker(!showMonthYearPicker)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.calendarMonthTitle, { color: isDark ? colors.accent : '#0083B0' }]}>
+                  <Text style={[styles.calendarMonthTitle, { color: isDark ? colors.accent : colors.primary }]}>
                     {calendarMonth.toLocaleString('default', { month: 'long' })} {calendarMonth.getFullYear()} ▾
                   </Text>
                 </TouchableOpacity>
@@ -1561,7 +2056,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? colors.accent : '#0083B0' }}>›</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? colors.accent : colors.primary }}>›</Text>
                 </TouchableOpacity>
               </View>
 
@@ -1578,7 +2073,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                           style={[
                             styles.yearPill,
                             { backgroundColor: colors.surface, borderColor: colors.border },
-                            isSelectedYr && { backgroundColor: '#0083B0', borderColor: '#0083B0' },
+                            isSelectedYr && { backgroundColor: colors.primary, borderColor: colors.primary },
                           ]}
                           onPress={() => {
                             const updated = new Date(calendarMonth);
@@ -1604,7 +2099,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                           style={[
                             styles.monthPill,
                             { backgroundColor: colors.surface, borderColor: colors.border },
-                            isSelectedM && { backgroundColor: '#0083B0', borderColor: '#0083B0' },
+                            isSelectedM && { backgroundColor: colors.primary, borderColor: colors.primary },
                           ]}
                           onPress={() => {
                             const updated = new Date(calendarMonth);
@@ -1648,7 +2143,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
 
                   // Day cells
                   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                  const fullDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
                   for (let d = 1; d <= totalDays; d++) {
                     const todayRef = new Date(2026, 8, 17);
@@ -1677,7 +2172,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                         onPress={() => {
                           if (!isPast) {
                             setSelectedDate(dateStr);
-                            setSelectedDay(dayNames[dateObj.getDay()]);
+                            setSelectedDay(fullDayNames[dateObj.getDay()]);
                             setRefDate(dateObj); // Updates 1-week Sunday to Saturday strip!
                             setShowCalendarModal(false);
                           }
@@ -1689,7 +2184,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                             styles.calendarDayText,
                             { color: colors.textPrimary },
                             isSelected && styles.calendarDayTextSelected,
-                            isToday && !isSelected && { color: isDark ? colors.accent : '#0083B0', fontWeight: '800' },
+                            isToday && !isSelected && { color: isDark ? colors.accent : colors.primary, fontWeight: '800' },
                             isPast && { color: isDark ? '#64748B' : '#94A3B8' },
                           ]}
                         >
@@ -3169,6 +3664,397 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // PREMIUM CELEBRATION REWARDS OVERLAY (FOR PAY NOW ONLINE ONLY)
+  darkGradientVictoryOverlay: {
+    flex: 1,
+    backgroundColor: '#0A2540',
+  },
+  transparentVictoryOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(10, 25, 47, 0.94)',
+    justifyContent: 'center',
+    paddingTop: 40,
+  },
+  victoryTopCloseBtn: {
+    position: 'absolute',
+    top: 48,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+  imageRefVictoryScrollContent: {
+    paddingHorizontal: 0,
+    paddingTop: 70,
+    paddingBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexGrow: 1,
+  },
+  imageRefHeaderTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    letterSpacing: -0.3,
+  },
+  imageRefGraphicContainer: {
+    width: '100%',
+    height: 540,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginVertical: 0,
+  },
+  imageRefGiftBoxArt: {
+    width: '100%',
+    height: '100%',
+  },
+  floatingCoinWrap1: {
+    position: 'absolute',
+    top: 10,
+    left: 20,
+  },
+  floatingCoinWrap2: {
+    position: 'absolute',
+    top: 20,
+    right: 25,
+  },
+  floatingCoinWrap3: {
+    position: 'absolute',
+    bottom: 25,
+    right: 15,
+  },
+  coinEmoji: {
+    fontSize: 26,
+  },
+  imageRefDetailsCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#334155',
+    padding: 16,
+    width: '100%',
+    marginVertical: 16,
+  },
+  victoryCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  imageRefRefText: {
+    fontSize: 13.5,
+    color: '#F8FAFC',
+    fontWeight: '600',
+  },
+  imageRefMetaText: {
+    fontSize: 12.5,
+    color: '#CBD5E1',
+    marginBottom: 6,
+  },
+  imageRefOrangeCloseBtn: {
+    backgroundColor: '#F97316',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 24,
+    width: '100%',
+    marginTop: 10,
+    shadowColor: '#F97316',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  imageRefOrangeCloseBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  rewardSummaryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#0F2942',
+    padding: 10,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  rewardSummaryBannerText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#38BDF8',
+    flex: 1,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxWidth: 480,
+    shadowColor: '#0083B0',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  modalHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F253E',
+  },
+  modalHeaderSub: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paySummaryBox: {
+    backgroundColor: '#DEF0FD',
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  paySummaryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0369A1',
+    textAlign: 'center',
+  },
+  paySummaryAmount: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#0083B0',
+    marginTop: 4,
+  },
+  methodSectionHeader: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  methodOptionCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    marginBottom: 10,
+  },
+  methodOptionCardSelected: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#0083B0',
+  },
+  methodRadioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  radioCircleActive: {
+    borderColor: '#0083B0',
+  },
+  radioInnerDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#0083B0',
+  },
+  methodTitle: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0F253E',
+  },
+  methodSubtitle: {
+    fontSize: 11.5,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  upiAppsRow: {
+    flexDirection: 'row',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    gap: 8,
+  },
+  upiAppPill: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  upiAppPillActive: {
+    backgroundColor: '#0083B0',
+    borderColor: '#0083B0',
+  },
+  upiAppPillText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  upiAppPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  confirmPayBtn: {
+    backgroundColor: '#0083B0',
+    borderRadius: 14,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: '#0083B0',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  confirmPayBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  // DOCTOR SEARCH STYLES
+  searchDoctorWrapper: {
+    marginBottom: 16,
+  },
+  searchDoctorLabel: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  searchDoctorInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    gap: 10,
+  },
+  searchDoctorTextInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    paddingVertical: 0,
+  },
+  searchResultsCardContainer: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 14,
+    marginBottom: 18,
+  },
+  searchResultsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  searchResultsTitleText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  searchEmptyStateBox: {
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchEmptyStateText: {
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  searchResultItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  searchResultAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  searchResultDoctorName: {
+    fontSize: 14.5,
+    fontWeight: '700',
+  },
+  searchResultSpecText: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  searchResultUnitText: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  searchResultFeeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  searchResultFeeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  selectSlotBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  selectSlotBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  searchedDoctorNoticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  viewAllDoctorsBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  viewAllDoctorsBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 

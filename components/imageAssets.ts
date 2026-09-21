@@ -20,11 +20,12 @@ export const IMAGES = {
 
   // Rewards & Hero Artworks
   giftBoxRewards: require('../assets/images/gift_box_rewards.webp'),
+  rewardBlastGif: require('../assets/gifs/rewards_points_blast.gif'),
   heroCharacter: require('../assets/images/hero_character.webp'),
 
   // Logos & Backgrounds
   patientPortalLogo: require('../assets/images/patient_portal_logo.webp'),
-  bethanyLogo: require('../assets/images/bethany_logo.webp'),
+  hospitalLogo: require('../assets/images/hospital_logo.webp'),
   btnGradientBg: require('../assets/images/btn_gradient_bg.webp'),
   leavesWaveBg: require('../assets/images/leaves_wave_bg.webp'),
   waveFooterBg: require('../assets/images/wave_footer_bg.webp'),

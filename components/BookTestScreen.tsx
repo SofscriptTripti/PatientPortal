@@ -188,7 +188,7 @@ const PENDING_SELF_BOOKINGS: SelfBookedDiagnostic[] = [
     timeSlot: '10:30 AM',
     amount: 560.0,
     status: 'Pending Lab Visit',
-    location: 'GMCH Central Diagnostic Lab (Ground Floor, OPD Wing B)',
+    location: 'Central Diagnostic Lab (Ground Floor, OPD Wing B)',
     instructions: 'Report 10 minutes prior to slot time with digital token.',
   },
   {
@@ -198,12 +198,14 @@ const PENDING_SELF_BOOKINGS: SelfBookedDiagnostic[] = [
     timeSlot: '11:15 AM',
     amount: 420.0,
     status: 'Pending Lab Visit',
-    location: 'GMCH Central Diagnostic Lab (Ground Floor, OPD Wing B)',
+    location: 'Central Diagnostic Lab (Ground Floor, OPD Wing B)',
     instructions: 'Morning fasting recommended. Bring national ID for verification.',
   },
 ];
 
 const SELF_PRESCRIBED_CATEGORIES = [
+  { id: 'lab_test', title: 'Lab Test', icon: 'flask' as const, count: '10 Tests' },
+  { id: 'radiology_test', title: 'Radiology Test', icon: 'image' as const, count: '8 Tests' },
   { id: 'first_aid', title: 'First Aid & Diagnostic Supplies', icon: 'medkit' as const, count: '12 Tests' },
   { id: 'personal_care', title: 'Personal Care & Preventive Health', icon: 'heart' as const, count: '18 Tests' },
   { id: 'medical_devices', title: 'Medical Devices & Blood Monitors', icon: 'pulse' as const, count: '8 Tests' },
@@ -213,17 +215,77 @@ const SELF_PRESCRIBED_CATEGORIES = [
 ];
 
 const CATEGORY_CUSTOM_TESTS: DiagnosticTest[] = [
+  // 1. LAB TEST (3 Tests)
   {
-    id: 'vit_d3_b12',
-    name: 'Vitamin D3 & B12 Combo Panel',
-    price: 560.0,
-    mrp: 800.0,
-    savings: 240.0,
-    savingsPct: 30.0,
-    rewardPoints: 60,
-    fastingNote: 'No fasting required.',
-    category: 'vitamins',
+    id: 'lft_complete',
+    name: 'Liver Function Test (LFT Complete)',
+    price: 450.0,
+    mrp: 650.0,
+    savings: 200.0,
+    savingsPct: 30.7,
+    rewardPoints: 45,
+    fastingNote: '8 hours fasting recommended.',
+    category: 'lab_test',
   },
+  {
+    id: 'kft_renal',
+    name: 'Kidney Function Test (KFT / Renal Panel)',
+    price: 480.0,
+    mrp: 700.0,
+    savings: 220.0,
+    savingsPct: 31.4,
+    rewardPoints: 50,
+    fastingNote: 'Overnight fasting required.',
+    category: 'lab_test',
+  },
+  {
+    id: 'serum_electrolytes',
+    name: 'Serum Electrolytes & Uric Acid Profile',
+    price: 360.0,
+    mrp: 520.0,
+    savings: 160.0,
+    savingsPct: 30.7,
+    rewardPoints: 35,
+    fastingNote: 'No fasting required.',
+    category: 'lab_test',
+  },
+
+  // 2. RADIOLOGY TEST (3 Tests)
+  {
+    id: 'chest_xray',
+    name: 'Chest X-Ray PA View (Digital Diagnostic)',
+    price: 350.0,
+    mrp: 500.0,
+    savings: 150.0,
+    savingsPct: 30.0,
+    rewardPoints: 35,
+    fastingNote: 'No metallic objects permitted.',
+    category: 'radiology_test',
+  },
+  {
+    id: 'usg_abdomen',
+    name: 'Ultrasound Abdomen & Pelvis (USG Scan)',
+    price: 850.0,
+    mrp: 1200.0,
+    savings: 350.0,
+    savingsPct: 29.1,
+    rewardPoints: 85,
+    fastingNote: 'Full bladder required prior to scan.',
+    category: 'radiology_test',
+  },
+  {
+    id: 'mri_ct_brain',
+    name: 'Brain MRI / High-Resolution CT Screening',
+    price: 2400.0,
+    mrp: 3500.0,
+    savings: 1100.0,
+    savingsPct: 31.4,
+    rewardPoints: 240,
+    fastingNote: 'Remove all metal jewelry.',
+    category: 'radiology_test',
+  },
+
+  // 3. FIRST AID & DIAGNOSTIC SUPPLIES (3 Tests)
   {
     id: 'cbc_esr',
     name: 'Complete Blood Count (CBC with ESR)',
@@ -236,6 +298,170 @@ const CATEGORY_CUSTOM_TESTS: DiagnosticTest[] = [
     category: 'first_aid',
   },
   {
+    id: 'wound_swab',
+    name: 'First Aid Wound Culture & Bacterial Swab',
+    price: 350.0,
+    mrp: 500.0,
+    savings: 150.0,
+    savingsPct: 30.0,
+    rewardPoints: 35,
+    fastingNote: 'Clean sample site prior to lab visit.',
+    category: 'first_aid',
+  },
+  {
+    id: 'tetanus_marker',
+    name: 'Acute Infection & CRP Tetanus Antibody Marker',
+    price: 420.0,
+    mrp: 600.0,
+    savings: 180.0,
+    savingsPct: 30.0,
+    rewardPoints: 40,
+    fastingNote: 'No fasting required.',
+    category: 'first_aid',
+  },
+
+  // 4. PERSONAL CARE & PREVENTIVE HEALTH (3 Tests)
+  {
+    id: 'hair_skin_panel',
+    name: 'Comprehensive Hair & Skin Health Bio-Panel',
+    price: 490.0,
+    mrp: 700.0,
+    savings: 210.0,
+    savingsPct: 30.0,
+    rewardPoints: 50,
+    fastingNote: 'Fast 8 hours for serum iron accuracy.',
+    category: 'personal_care',
+  },
+  {
+    id: 'lipid_wellness',
+    name: 'Basic Wellness & Lipid Health Checkup',
+    price: 380.0,
+    mrp: 550.0,
+    savings: 170.0,
+    savingsPct: 30.9,
+    rewardPoints: 40,
+    fastingNote: '10-12 hours fasting required.',
+    category: 'personal_care',
+  },
+  {
+    id: 'immunity_ige',
+    name: 'Immunity Shield & Serum IgE Allergy Profile',
+    price: 520.0,
+    mrp: 750.0,
+    savings: 230.0,
+    savingsPct: 30.6,
+    rewardPoints: 50,
+    fastingNote: 'No fasting required.',
+    category: 'personal_care',
+  },
+
+  // 5. MEDICAL DEVICES & BLOOD MONITORS (3 Tests)
+  {
+    id: 'cgm_calibration',
+    name: 'Continuous Glucose Monitor (CGM) Calibration Test',
+    price: 650.0,
+    mrp: 900.0,
+    savings: 250.0,
+    savingsPct: 27.7,
+    rewardPoints: 65,
+    fastingNote: 'Bring digital monitor to lab.',
+    category: 'medical_devices',
+  },
+  {
+    id: 'bp_pulse_check',
+    name: 'Digital BP & Pulse Oximeter Accuracy Check',
+    price: 320.0,
+    mrp: 450.0,
+    savings: 130.0,
+    savingsPct: 28.8,
+    rewardPoints: 30,
+    fastingNote: 'Rest 15 minutes before reading.',
+    category: 'medical_devices',
+  },
+  {
+    id: 'ecg_rhythm_trace',
+    name: 'Digital Cardiac 12-Lead ECG Rhythm Trace',
+    price: 450.0,
+    mrp: 650.0,
+    savings: 200.0,
+    savingsPct: 30.7,
+    rewardPoints: 45,
+    fastingNote: 'Avoid caffeine 2 hours prior.',
+    category: 'medical_devices',
+  },
+
+  // 6. VITAMINS & DEFICIENCY PANELS (3 Tests)
+  {
+    id: 'vit_d3_b12',
+    name: 'Vitamin D3 & B12 Combo Panel',
+    price: 560.0,
+    mrp: 800.0,
+    savings: 240.0,
+    savingsPct: 30.0,
+    rewardPoints: 60,
+    fastingNote: 'No fasting required.',
+    category: 'vitamins',
+  },
+  {
+    id: 'essential_micronutrients',
+    name: 'Full Essential Micronutrients & Minerals Panel',
+    price: 750.0,
+    mrp: 1050.0,
+    savings: 300.0,
+    savingsPct: 28.5,
+    rewardPoints: 75,
+    fastingNote: 'Morning sample recommended.',
+    category: 'vitamins',
+  },
+  {
+    id: 'calcium_bcomplex',
+    name: 'Serum Calcium & Vitamin B-Complex Test',
+    price: 390.0,
+    mrp: 550.0,
+    savings: 160.0,
+    savingsPct: 29.0,
+    rewardPoints: 40,
+    fastingNote: 'No fasting required.',
+    category: 'vitamins',
+  },
+
+  // 7. DIABETIC & SUGAR CARE (3 Tests)
+  {
+    id: 'fasting_pp_sugar',
+    name: 'Fasting & Post-Prandial (PP) Blood Sugar Duo',
+    price: 250.0,
+    mrp: 350.0,
+    savings: 100.0,
+    savingsPct: 28.5,
+    rewardPoints: 25,
+    fastingNote: 'Fasting 8-10 hrs, PP sample 2 hrs after meal.',
+    category: 'diabetic_care',
+  },
+  {
+    id: 'hba1c_microalbumin',
+    name: 'HbA1c & Microalbuminuria Diabetes Risk Profile',
+    price: 580.0,
+    mrp: 820.0,
+    savings: 240.0,
+    savingsPct: 29.2,
+    rewardPoints: 60,
+    fastingNote: 'No fasting required for HbA1c.',
+    category: 'diabetic_care',
+  },
+  {
+    id: 'insulin_resistance_index',
+    name: 'Insulin Resistance & Beta Cell Function Index',
+    price: 850.0,
+    mrp: 1200.0,
+    savings: 350.0,
+    savingsPct: 29.1,
+    rewardPoints: 85,
+    fastingNote: '12 hours strict overnight fasting required.',
+    category: 'diabetic_care',
+  },
+
+  // 8. FULL BODY HEALTH PACKAGES (3 Packages)
+  {
     id: 'executive_package',
     name: 'Executive Full Body Screening Package',
     price: 1399.0,
@@ -244,6 +470,28 @@ const CATEGORY_CUSTOM_TESTS: DiagnosticTest[] = [
     savingsPct: 30.0,
     rewardPoints: 150,
     fastingNote: '10-12 hours fasting required.',
+    category: 'full_body',
+  },
+  {
+    id: 'master_health_checkup',
+    name: 'Master Health Checkup & Vital Organ Profile',
+    price: 1899.0,
+    mrp: 2699.0,
+    savings: 800.0,
+    savingsPct: 29.6,
+    rewardPoints: 190,
+    fastingNote: '12 hours fasting required.',
+    category: 'full_body',
+  },
+  {
+    id: 'senior_citizen_package',
+    name: 'Senior Citizen Comprehensive Health Care Package',
+    price: 2200.0,
+    mrp: 3100.0,
+    savings: 900.0,
+    savingsPct: 29.0,
+    rewardPoints: 220,
+    fastingNote: 'Overnight fasting required.',
     category: 'full_body',
   },
 ];
@@ -293,6 +541,11 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
   );
   const [testSlots, setTestSlots] = useState<Record<string, string>>({});
   const [paymentMode, setPaymentMode] = useState<'pay_now' | 'pay_later'>('pay_now');
+
+  // Payment Modal State (UPI / Card / NetBanking)
+  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [selectedMethod, setSelectedMethod] = useState<'UPI' | 'CARD' | 'NETBANKING'>('UPI');
+  const [selectedUpiApp, setSelectedUpiApp] = useState<'GPAY' | 'PHONEPE' | 'PAYTM'>('GPAY');
 
   // Animation refs
   const coinFloatAnim = useRef(new Animated.Value(0)).current;
@@ -447,6 +700,15 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
   };
 
   const handleFinalPaymentSubmit = () => {
+    if (paymentMode === 'pay_now') {
+      setShowPaymentModal(true);
+    } else {
+      executeFinalTestBooking();
+    }
+  };
+
+  const executeFinalTestBooking = () => {
+    setShowPaymentModal(false);
     if (paymentMode === 'pay_now' && onAddHealthPoints) {
       // Award Health Points only when user pays now online!
       const earned = totalRewardPoints + 20;
@@ -525,7 +787,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <AppIcon name="back" size={20} color="#0083B0" />
+              <AppIcon name="back" size={20} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -617,14 +879,19 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                     >
                       <View style={styles.prescriptionHeaderRow}>
                         <View style={styles.heroDocIconCircle}>
-                          <AppIcon name="user-check" size={22} color="#0083B0" />
+                          <AppIcon name="user-check" size={22} color={colors.primary} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.heroDocTitle, { color: colors.textPrimary }]}>
-                            {rx.doctorName}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={[styles.heroDocTitle, { color: colors.textPrimary }]}>
+                              {rx.doctorName}
+                            </Text>
+                            <View style={styles.opBadgePill}>
+                              <Text style={styles.opBadgeText}>OP</Text>
+                            </View>
+                          </View>
                           <Text style={[styles.heroDocMeta, { color: colors.textSecondary }]}>
-                            Ref: <Text style={{ fontWeight: '700', color: '#0083B0' }}>{rx.visitRef}</Text> • {rx.date}
+                            Ref: <Text style={{ fontWeight: '700', color: colors.primary }}>{rx.visitRef}</Text> • {rx.date}
                           </Text>
                         </View>
 
@@ -637,7 +904,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                           <AppIcon
                             name={isExpanded ? 'chevron-up' : 'chevron-down'}
                             size={22}
-                            color="#0083B0"
+                            color={colors.primary}
                           />
                         </TouchableOpacity>
                       </View>
@@ -652,7 +919,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                           <Text style={[styles.prescriptionSummaryNotesText, { color: colors.textPrimary }]}>
                             💡 {rx.summaryNotes}
                           </Text>
-                          <Text style={[styles.prescribedCountText, { color: '#0083B0' }]}>
+                          <Text style={[styles.prescribedCountText, { color: colors.primary }]}>
                             📋 {rx.tests.length} Diagnostic Tests Prescribed
                           </Text>
                         </View>
@@ -689,14 +956,14 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                     styles.activeRxBannerCard,
                     {
                       backgroundColor: isDark ? '#1E293B' : '#E6F4FA',
-                      borderColor: '#0083B0',
+                      borderColor: colors.primary,
                     },
                   ]}
                 >
                   <View style={styles.activeRxHeaderRow}>
-                    <AppIcon name="user-check" size={22} color="#0083B0" />
+                    <AppIcon name="user-check" size={22} color={colors.primary} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.activeRxDocName, { color: isDark ? '#F1F5F9' : '#004F6E' }]}>
+                      <Text style={[styles.activeRxDocName, { color: isDark ? '#F1F5F9' : colors.primary }]}>
                         {activePrescription.doctorName}
                       </Text>
                       <Text style={[styles.activeRxMetaText, { color: isDark ? '#CBD5E1' : '#334155' }]}>
@@ -708,7 +975,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
 
                 {/* SEARCH BOX */}
                 <View style={[styles.searchBoxContainer, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0' }]}>
-                  <AppIcon name="search" size={18} color="#0083B0" />
+                  <AppIcon name="search" size={18} color={colors.primary} />
                   <TextInput
                     style={[styles.searchInput, { color: colors.textPrimary }]}
                     placeholder="Search prescribed tests..."
@@ -737,7 +1004,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                         styles.testCard,
                         {
                           backgroundColor: colors.surface,
-                          borderColor: isSelected ? '#0083B0' : isDark ? colors.border : '#E2E8F0',
+                          borderColor: isSelected ? colors.primary : isDark ? colors.border : '#E2E8F0',
                           borderWidth: isSelected ? 1.5 : 1,
                         },
                       ]}
@@ -790,12 +1057,50 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
               </ScrollView>
             )}
 
-            {/* TAB 2: SELF PRESCRIPTION (PENDING SELF BOOKINGS) */}
+            {/* TAB 2: SELF PRESCRIPTION (EXPLORE DIAGNOSTIC CATEGORIES + PENDING BOOKINGS) */}
             {activeTab === 'self_prescription' && (
               <ScrollView
                 contentContainerStyle={[styles.scrollListContent, { paddingBottom: 100 }]}
                 showsVerticalScrollIndicator={false}
               >
+                {/* 1. EXPLORE DIAGNOSTIC CATEGORIES GRID */}
+                <Text style={[styles.sectionHeading, { color: colors.textPrimary, marginBottom: 4 }]}>
+                  Select Diagnostic Category ({SELF_PRESCRIBED_CATEGORIES.length})
+                </Text>
+                <Text style={[styles.selfTabSubNote, { color: colors.textSecondary, marginBottom: 12 }]}>
+                  Choose a category below to browse lab tests, radiology scans, and health packages.
+                </Text>
+
+                <View style={{ gap: 10, marginBottom: 20 }}>
+                  {SELF_PRESCRIBED_CATEGORIES.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[
+                        styles.categoryCard,
+                        {
+                          backgroundColor: colors.surface,
+                          borderColor: isDark ? colors.border : '#E2E8F0',
+                        },
+                      ]}
+                      onPress={() => {
+                        setSelectedCategory(cat.id);
+                        setShowBookCustomModal(true);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.categoryIconWrap}>
+                        <AppIcon name={cat.icon} size={22} color={colors.primary} />
+                      </View>
+                      <View style={styles.categoryTextCol}>
+                        <Text style={[styles.categoryTitle, { color: colors.textPrimary }]}>{cat.title}</Text>
+                        <Text style={[styles.categoryCount, { color: colors.textSecondary }]}>{cat.count}</Text>
+                      </View>
+                      <AppIcon name="chevron-right" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* 2. PENDING SELF BOOKINGS */}
                 <View style={styles.selfTabHeaderRow}>
                   <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
                     Self-Booked Pending Diagnostics ({PENDING_SELF_BOOKINGS.length})
@@ -819,7 +1124,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                   >
                     <View style={styles.selfBookingHeader}>
                       <View style={styles.selfRefBadge}>
-                        <AppIcon name="flask" size={13} color="#0083B0" />
+                        <AppIcon name="flask" size={13} color={colors.primary} />
                         <Text style={styles.selfRefBadgeText}>{booking.bookingId}</Text>
                       </View>
 
@@ -828,19 +1133,24 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                       </View>
                     </View>
 
-                    <Text style={[styles.selfTestTitle, { color: colors.textPrimary }]}>
-                      {booking.testName}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={[styles.selfTestTitle, { color: colors.textPrimary }]}>
+                        {booking.testName}
+                      </Text>
+                      <View style={styles.opBadgePill}>
+                        <Text style={styles.opBadgeText}>OP</Text>
+                      </View>
+                    </View>
 
                     <View style={styles.selfDetailRow}>
-                      <AppIcon name="calendar" size={15} color="#0083B0" />
+                      <AppIcon name="calendar" size={15} color={colors.primary} />
                       <Text style={[styles.selfDetailText, { color: colors.textPrimary }]}>
-                        {booking.date} • <Text style={{ fontWeight: '700', color: '#0083B0' }}>{booking.timeSlot}</Text>
+                        {booking.date} • <Text style={{ fontWeight: '700', color: colors.primary }}>{booking.timeSlot}</Text>
                       </Text>
                     </View>
 
                     <View style={styles.selfDetailRow}>
-                      <AppIcon name="hospital" size={15} color="#0083B0" />
+                      <AppIcon name="hospital" size={15} color={colors.primary} />
                       <Text style={[styles.selfDetailText, { color: colors.textSecondary }]}>
                         {booking.location}
                       </Text>
@@ -852,14 +1162,14 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
 
                     <View style={styles.selfFooterRow}>
                       <Text style={[styles.selfAmountText, { color: colors.textPrimary }]}>
-                        Amount Paid: <Text style={{ color: '#0083B0', fontWeight: '800' }}>₹{booking.amount.toFixed(2)}</Text>
+                        Amount Paid: <Text style={{ color: colors.primary, fontWeight: '800' }}>₹{booking.amount.toFixed(2)}</Text>
                       </Text>
                       <TouchableOpacity
                         style={styles.selfTokenBtn}
                         onPress={() =>
                           Alert.alert(
                             'Lab Entry Digital Token',
-                            `Token ID: ${booking.bookingId}\nPresent this barcode token at GMCH OPD Diagnostic Desk on ${booking.date} at ${booking.timeSlot}.`
+                            `Token ID: ${booking.bookingId}\nPresent this barcode token at OPD Diagnostic Desk on ${booking.date} at ${booking.timeSlot}.`
                           )
                         }
                       >
@@ -888,7 +1198,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                     {selectedTests.length} Test{selectedTests.length > 1 ? 's' : ''} Selected
                   </Text>
                   <Text style={[styles.cartPriceText, { color: colors.textSecondary }]}>
-                    Total: <Text style={{ color: '#0083B0', fontWeight: '700' }}>₹{totalPrice.toFixed(2)}</Text>{' '}
+                    Total: <Text style={{ color: colors.primary, fontWeight: '700' }}>₹{totalPrice.toFixed(2)}</Text>{' '}
                     | Save: ₹{totalSavings.toFixed(2)}
                   </Text>
                 </View>
@@ -927,13 +1237,13 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
           >
             <View style={[styles.cardContainer, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0' }]}>
               <View style={styles.hospitalWalkInHeader}>
-                <AppIcon name="hospital" size={22} color="#0083B0" />
+                <AppIcon name="hospital" size={22} color={colors.primary} />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-                    GMCH Central Diagnostic Lab Visit
+                    Central Diagnostic Lab Visit
                   </Text>
                   <Text style={[styles.hospitalLocationText, { color: colors.textSecondary }]}>
-                    Ground Floor, OPD Block Wing B, GMCH Hospital Main Campus
+                    Ground Floor, OPD Block Wing B, Hospital Main Campus
                   </Text>
                 </View>
               </View>
@@ -959,7 +1269,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                   <View style={styles.testSlotHeader}>
                     <Text style={[styles.testSlotTitle, { color: colors.textPrimary }]}>{test.name}</Text>
                     <View style={styles.assignedSlotBadge}>
-                      <AppIcon name="clock" size={13} color="#0083B0" />
+                      <AppIcon name="clock" size={13} color={colors.primary} />
                       <Text style={styles.assignedSlotBadgeText}>{currentSlot || 'Select Slot'}</Text>
                     </View>
                   </View>
@@ -1016,7 +1326,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
             >
               <View style={styles.invoiceHeaderRow}>
                 <View>
-                  <Text style={styles.invoiceOrgName}>GMCH CENTRAL DIAGNOSTICS</Text>
+                  <Text style={styles.invoiceOrgName}>CENTRAL DIAGNOSTICS</Text>
                   <Text style={[styles.invoiceSubTitle, { color: colors.textSecondary }]}>
                     Official Diagnostic Tax Invoice • Hospital Walk-in
                   </Text>
@@ -1071,7 +1381,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                 <Text style={styles.breakdownDiscount}>-₹50.00</Text>
               </View>
 
-              <View style={[styles.divider, { height: 1.5, backgroundColor: '#0083B0' }]} />
+              <View style={[styles.divider, { height: 1.5, backgroundColor: colors.primary }]} />
 
               <View style={styles.totalRow}>
                 <Text style={[styles.totalLabel, { color: colors.textPrimary }]}>Net Amount Payable</Text>
@@ -1080,7 +1390,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
 
               {paymentMode === 'pay_now' && (
                 <View style={styles.earnedPointsBanner}>
-                  <AppIcon name="star" size={16} color="#0083B0" />
+                  <AppIcon name="star" size={16} color={colors.primary} />
                   <Text style={styles.earnedPointsText}>
                     You will earn <Text style={{ fontWeight: '800' }}>+{totalRewardPoints + 20} Health Points</Text> on this online payment!
                   </Text>
@@ -1093,35 +1403,35 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
             <TouchableOpacity
               style={[
                 styles.payModeOption,
-                { backgroundColor: colors.surface, borderColor: paymentMode === 'pay_now' ? '#0083B0' : colors.border },
+                { backgroundColor: colors.surface, borderColor: paymentMode === 'pay_now' ? colors.primary : colors.border },
                 paymentMode === 'pay_now' && { borderWidth: 2 },
               ]}
               onPress={() => setPaymentMode('pay_now')}
               activeOpacity={0.8}
             >
-              <AppIcon name="card" size={20} color="#0083B0" />
+              <AppIcon name="card" size={20} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.payModeTitle, { color: colors.textPrimary }]}>Pay Now Online (UPI / Cards / NetBanking)</Text>
                 <Text style={[styles.payModeSub, { color: colors.textSecondary }]}>Instant confirmation + Extra Bonus Health Points</Text>
               </View>
-              {paymentMode === 'pay_now' && <AppIcon name="check" size={20} color="#0083B0" />}
+              {paymentMode === 'pay_now' && <AppIcon name="check" size={20} color={colors.primary} />}
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.payModeOption,
-                { backgroundColor: colors.surface, borderColor: paymentMode === 'pay_later' ? '#0083B0' : colors.border },
+                { backgroundColor: colors.surface, borderColor: paymentMode === 'pay_later' ? colors.primary : colors.border },
                 paymentMode === 'pay_later' && { borderWidth: 2 },
               ]}
               onPress={() => setPaymentMode('pay_later')}
               activeOpacity={0.8}
             >
-              <AppIcon name="wallet" size={20} color="#0083B0" />
+              <AppIcon name="wallet" size={20} color={colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.payModeTitle, { color: colors.textPrimary }]}>Pay Later at GMCH Lab Counter</Text>
+                <Text style={[styles.payModeTitle, { color: colors.textPrimary }]}>Pay Later at Hospital Lab Counter</Text>
                 <Text style={[styles.payModeSub, { color: colors.textSecondary }]}>Pay cash/UPI directly at hospital lab OPD counter (No points bonus)</Text>
               </View>
-              {paymentMode === 'pay_later' && <AppIcon name="check" size={20} color="#0083B0" />}
+              {paymentMode === 'pay_later' && <AppIcon name="check" size={20} color={colors.primary} />}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1136,91 +1446,211 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
           </ScrollView>
         )}
 
+        {/* PAYMENT METHODS MODAL SHEET (UPI / CARDS / NET BANKING) */}
+        <Modal
+          visible={showPaymentModal}
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={() => setShowPaymentModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View
+              style={[
+                styles.modalCard,
+                isTablet && { width: 480 },
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: isDark ? 1 : 0,
+                },
+              ]}
+            >
+              {/* Modal Header */}
+              <View style={styles.modalHeaderRow}>
+                <View>
+                  <Text style={[styles.modalHeaderTitle, { color: colors.textPrimary }]}>Select Payment Method</Text>
+                  <Text style={[styles.modalHeaderSub, { color: colors.textSecondary }]}>Healthcare Gateway</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setShowPaymentModal(false)}
+                  style={[styles.modalCloseBtn, { backgroundColor: colors.surfaceVariant }]}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <AppIcon name="close" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Amount to Pay Summary */}
+              <View
+                style={[
+                  styles.paySummaryBox,
+                  {
+                    backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight,
+                    borderColor: isDark ? colors.border : '#BAE6FD',
+                  },
+                ]}
+              >
+                <Text style={[styles.paySummaryLabel, { color: isDark ? colors.accent : '#0369A1' }]}>
+                  Lab Diagnostics Total Payable Amount
+                </Text>
+                <Text style={[styles.paySummaryAmount, { color: isDark ? colors.accent : colors.primary }]}>
+                  ₹{Math.max(0, totalPrice - 50).toFixed(2)}
+                </Text>
+              </View>
+
+              {/* Payment Methods Selection */}
+              <Text style={[styles.methodSectionHeader, { color: colors.textSecondary }]}>CHOOSE PAYMENT METHOD</Text>
+
+              {/* Option 1: Instant UPI */}
+              <TouchableOpacity
+                style={[
+                  styles.methodOptionCard,
+                  {
+                    backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC',
+                    borderColor: isDark ? colors.border : '#E2E8F0',
+                  },
+                  selectedMethod === 'UPI' && (isDark ? { backgroundColor: '#1E3A5F', borderColor: '#38BDF8' } : styles.methodOptionCardSelected),
+                ]}
+                onPress={() => setSelectedMethod('UPI')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.methodRadioRow}>
+                  <View style={[styles.radioCircle, { borderColor: colors.border }, selectedMethod === 'UPI' && styles.radioCircleActive]}>
+                    {selectedMethod === 'UPI' && <View style={styles.radioInnerDot} />}
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.methodTitle, { color: colors.textPrimary }]}>UPI Instant Payment</Text>
+                    <Text style={[styles.methodSubtitle, { color: colors.textSecondary }]}>Google Pay, PhonePe, Paytm, or UPI ID</Text>
+                  </View>
+                  <AppIcon name="shield-check" size={20} color={isDark ? colors.accent : colors.primary} />
+                </View>
+
+                {/* Sub UPI apps selection */}
+                {selectedMethod === 'UPI' && (
+                  <View style={[styles.upiAppsRow, { borderTopColor: colors.border }]}>
+                    {(['GPAY', 'PHONEPE', 'PAYTM'] as const).map((app) => (
+                      <TouchableOpacity
+                        key={app}
+                        style={[
+                          styles.upiAppPill,
+                          { backgroundColor: colors.surface, borderColor: colors.border },
+                          selectedUpiApp === app && styles.upiAppPillActive,
+                        ]}
+                        onPress={() => setSelectedUpiApp(app)}
+                        activeOpacity={0.75}
+                      >
+                        <Text
+                          style={[
+                            styles.upiAppPillText,
+                            { color: colors.textSecondary },
+                            selectedUpiApp === app && styles.upiAppPillTextActive,
+                          ]}
+                        >
+                          {app === 'GPAY' ? 'Google Pay' : app === 'PHONEPE' ? 'PhonePe' : 'Paytm'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Option 2: Credit / Debit Card */}
+              <TouchableOpacity
+                style={[
+                  styles.methodOptionCard,
+                  {
+                    backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC',
+                    borderColor: isDark ? colors.border : '#E2E8F0',
+                  },
+                  selectedMethod === 'CARD' && (isDark ? { backgroundColor: '#1E3A5F', borderColor: '#38BDF8' } : styles.methodOptionCardSelected),
+                ]}
+                onPress={() => setSelectedMethod('CARD')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.methodRadioRow}>
+                  <View style={[styles.radioCircle, { borderColor: colors.border }, selectedMethod === 'CARD' && styles.radioCircleActive]}>
+                    {selectedMethod === 'CARD' && <View style={styles.radioInnerDot} />}
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.methodTitle, { color: colors.textPrimary }]}>Credit / Debit Card</Text>
+                    <Text style={[styles.methodSubtitle, { color: colors.textSecondary }]}>Visa, MasterCard, RuPay, Amex</Text>
+                  </View>
+                  <AppIcon name="wallet-outline" size={20} color={isDark ? colors.accent : colors.primary} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Option 3: Net Banking */}
+              <TouchableOpacity
+                style={[
+                  styles.methodOptionCard,
+                  {
+                    backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC',
+                    borderColor: isDark ? colors.border : '#E2E8F0',
+                  },
+                  selectedMethod === 'NETBANKING' && (isDark ? { backgroundColor: '#1E3A5F', borderColor: '#38BDF8' } : styles.methodOptionCardSelected),
+                ]}
+                onPress={() => setSelectedMethod('NETBANKING')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.methodRadioRow}>
+                  <View style={[styles.radioCircle, { borderColor: colors.border }, selectedMethod === 'NETBANKING' && styles.radioCircleActive]}>
+                    {selectedMethod === 'NETBANKING' && <View style={styles.radioInnerDot} />}
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.methodTitle, { color: colors.textPrimary }]}>Net Banking</Text>
+                    <Text style={[styles.methodSubtitle, { color: colors.textSecondary }]}>HDFC, SBI, ICICI, Axis & all major banks</Text>
+                  </View>
+                  <AppIcon name="hospital" size={20} color={isDark ? colors.accent : colors.primary} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Confirm and Pay Button */}
+              <TouchableOpacity
+                style={styles.confirmPayBtn}
+                onPress={executeFinalTestBooking}
+                activeOpacity={0.88}
+              >
+                <Text style={styles.confirmPayBtnText}>
+                  Pay ₹{Math.max(0, totalPrice - 50).toFixed(2)} Securely
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
         {/* STEP 4: CONFIRMATION SCREEN */}
         {bookingStep === 'confirmation' && (
           paymentMode === 'pay_now' ? (
-            /* PAY NOW ONLINE: REWARDS CELEBRATION OVERLAY */
-            <View style={styles.darkGradientVictoryOverlay}>
+            /* PAY NOW ONLINE: TRANSPARENT REWARDS CELEBRATION OVERLAY (AMAZON / FLIPKART STYLE) */
+            <View style={styles.transparentVictoryOverlay}>
+              {/* TOP RIGHT CLOSE CROSS ICON */}
+              <TouchableOpacity
+                style={styles.victoryTopCloseBtn}
+                onPress={onBack}
+                activeOpacity={0.7}
+                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              >
+                <AppIcon name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+
               <ScrollView
                 contentContainerStyle={styles.imageRefVictoryScrollContent}
                 showsVerticalScrollIndicator={false}
               >
                 <Text style={styles.imageRefHeaderTitle}>
-                  You unlocked a new reward! 🎉
-                </Text>
-                <Text style={styles.imageRefSubTitle}>
-                  Congrats on completing your online payment! You earned +{totalRewardPoints + 20} Health Points!
+                  Woohoo! You Won +4 Health Points as a Reward! 🎉
                 </Text>
 
                 <Animated.View style={[styles.imageRefGraphicContainer, { transform: [{ scale: trophyScaleAnim }] }]}>
                   <Image
-                    source={IMAGES.giftBoxRewards}
+                    source={IMAGES.rewardBlastGif}
                     fadeDuration={0}
                     style={styles.imageRefGiftBoxArt}
                     resizeMode="contain"
                   />
-
-                  <Animated.View style={[styles.floatingCoinWrap1, { transform: [{ translateY: coinFloatAnim }] }]}>
-                    <Text style={styles.coinEmoji}>🪙</Text>
-                  </Animated.View>
-
-                  <Animated.View style={[styles.floatingCoinWrap2, { transform: [{ translateY: coinFloatAnim }] }]}>
-                    <Text style={styles.coinEmoji}>🪙</Text>
-                  </Animated.View>
-
-                  <Animated.View style={[styles.floatingCoinWrap3, { transform: [{ translateY: coinFloatAnim }] }]}>
-                    <Text style={styles.coinEmoji}>✨</Text>
-                  </Animated.View>
                 </Animated.View>
-
-                <View style={styles.imageRefDetailsCard}>
-                  <View style={styles.victoryCardHeaderRow}>
-                    <AppIcon name="check" size={18} color="#16A34A" />
-                    <Text style={styles.imageRefRefText}>
-                      Booking Ref: <Text style={{ color: '#0083B0', fontWeight: '800' }}>LAB-2026-9402</Text>
-                    </Text>
-                  </View>
-
-                  <View style={styles.divider} />
-
-                  <Text style={styles.imageRefMetaText}>
-                    🏥 <Text style={{ fontWeight: '700' }}>Lab Visit Location:</Text> GMCH OPD Central Diagnostic Lab (Ground Floor)
-                  </Text>
-                  <Text style={styles.imageRefMetaText}>
-                    🗓️ <Text style={{ fontWeight: '700' }}>Visit Time Slot:</Text> Tomorrow Morning ({TIME_SLOTS[0]} - {TIME_SLOTS[1]})
-                  </Text>
-                  <Text style={styles.imageRefMetaText}>
-                    💳 <Text style={{ fontWeight: '700' }}>Payment Mode:</Text> Paid Online (UPI/Card)
-                  </Text>
-
-                  <View style={styles.rewardSummaryBanner}>
-                    <AppIcon name="star" size={20} color="#38BDF8" />
-                    <Text style={styles.rewardSummaryBannerText}>
-                      +{totalRewardPoints + 20} Health Points credited dynamically to your Patient Account!
-                    </Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.imageRefOrangeCloseBtn}
-                  onPress={onBack}
-                  activeOpacity={0.88}
-                >
-                  <Text style={styles.imageRefOrangeCloseBtnText}>Close & Return to Dashboard</Text>
-                </TouchableOpacity>
-
-                {onOpenVisits && (
-                  <TouchableOpacity
-                    style={styles.imageRefSecondaryBtn}
-                    onPress={() => {
-                      onBack();
-                      onOpenVisits();
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.imageRefSecondaryBtnText}>View My Lab Bookings</Text>
-                  </TouchableOpacity>
-                )}
               </ScrollView>
             </View>
           ) : (
@@ -1238,14 +1668,14 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                   Lab Visit Booking Confirmed!
                 </Text>
                 <Text style={[styles.payLaterSub, { color: colors.textSecondary }]}>
-                  Your appointment slot is reserved at GMCH Central Lab OPD.
+                  Your appointment slot is reserved at Central Lab OPD.
                 </Text>
 
                 <View style={styles.divider} />
 
                 <View style={styles.payLaterDetailRow}>
                   <Text style={[styles.payLaterLabel, { color: colors.textSecondary }]}>Booking Ref No:</Text>
-                  <Text style={[styles.payLaterVal, { color: '#0083B0' }]}>LAB-2026-9402</Text>
+                  <Text style={[styles.payLaterVal, { color: colors.primary }]}>LAB-2026-9402</Text>
                 </View>
 
                 <View style={styles.payLaterDetailRow}>
@@ -1255,7 +1685,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
 
                 <View style={styles.payLaterDetailRow}>
                   <Text style={[styles.payLaterLabel, { color: colors.textSecondary }]}>Net Amount Due:</Text>
-                  <Text style={[styles.payLaterVal, { color: '#0083B0' }]}>₹{Math.max(0, totalPrice - 50).toFixed(2)}</Text>
+                  <Text style={[styles.payLaterVal, { color: colors.primary }]}>₹{Math.max(0, totalPrice - 50).toFixed(2)}</Text>
                 </View>
 
                 <View style={styles.payLaterDetailRow}>
@@ -1270,21 +1700,8 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                   onPress={onBack}
                   activeOpacity={0.88}
                 >
-                  <Text style={styles.primaryActionButtonText}>Return to Dashboard</Text>
+                  <Text style={styles.primaryActionButtonText}>OK</Text>
                 </TouchableOpacity>
-
-                {onOpenVisits && (
-                  <TouchableOpacity
-                    style={styles.secondaryOutlineBtn}
-                    onPress={() => {
-                      onBack();
-                      onOpenVisits();
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.secondaryOutlineBtnText}>View My Lab Bookings</Text>
-                  </TouchableOpacity>
-                )}
               </View>
             </ScrollView>
           )
@@ -1316,7 +1733,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                     style={[styles.headerBackBtn, isDark && { backgroundColor: colors.borderLight }]}
                     onPress={() => setShowBookCustomModal(false)}
                   >
-                    <AppIcon name="close" size={20} color="#0083B0" />
+                    <AppIcon name="close" size={20} color={colors.primary} />
                   </TouchableOpacity>
                 </View>
 
@@ -1330,7 +1747,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
               </View>
 
               <View style={[styles.searchBoxContainer, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0', marginTop: 12, marginHorizontal: 16 }]}>
-                <AppIcon name="search" size={18} color="#0083B0" />
+                <AppIcon name="search" size={18} color={colors.primary} />
                 <TextInput
                   style={[styles.searchInput, { color: colors.textPrimary }]}
                   placeholder="Search test by name or category..."
@@ -1369,13 +1786,13 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                         activeOpacity={0.8}
                       >
                         <View style={styles.categoryIconWrap}>
-                          <AppIcon name={cat.icon} size={22} color="#0083B0" />
+                          <AppIcon name={cat.icon} size={22} color={colors.primary} />
                         </View>
                         <View style={styles.categoryTextCol}>
                           <Text style={[styles.categoryTitle, { color: colors.textPrimary }]}>{cat.title}</Text>
                           <Text style={[styles.categoryCount, { color: colors.textSecondary }]}>{cat.count}</Text>
                         </View>
-                        <AppIcon name="chevron-right" size={20} color="#0083B0" />
+                        <AppIcon name="chevron-right" size={20} color={colors.primary} />
                       </TouchableOpacity>
                     ))}
                   </>
@@ -1385,7 +1802,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                       style={styles.backToCatBtn}
                       onPress={() => setSelectedCategory(null)}
                     >
-                      <AppIcon name="back" size={16} color="#0083B0" />
+                      <AppIcon name="back" size={16} color={colors.primary} />
                       <Text style={styles.backToCatText}>
                         Back to All Categories ({SELF_PRESCRIBED_CATEGORIES.find((c) => c.id === selectedCategory)?.title})
                       </Text>
@@ -1400,7 +1817,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                             styles.testCard,
                             {
                               backgroundColor: colors.surface,
-                              borderColor: isSelected ? '#0083B0' : isDark ? colors.border : '#E2E8F0',
+                              borderColor: isSelected ? colors.primary : isDark ? colors.border : '#E2E8F0',
                               borderWidth: isSelected ? 1.5 : 1,
                             },
                           ]}
@@ -1466,7 +1883,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                       {selectedTests.length} Test{selectedTests.length > 1 ? 's' : ''} Selected
                     </Text>
                     <Text style={[styles.cartPriceText, { color: colors.textSecondary }]}>
-                      Total: <Text style={{ color: '#0083B0', fontWeight: '700' }}>₹{totalPrice.toFixed(2)}</Text>
+                      Total: <Text style={{ color: colors.primary, fontWeight: '700' }}>₹{totalPrice.toFixed(2)}</Text>
                     </Text>
                   </View>
 
@@ -1507,7 +1924,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: '#DEF0FD',
     opacity: 0.8,
   },
   ambientMidGlow: {
@@ -1644,7 +2061,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#D0EDFF',
+    backgroundColor: '#DEF0FD',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1849,7 +2266,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#D0EDFF',
+    backgroundColor: '#DEF0FD',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -1857,7 +2274,7 @@ const styles = StyleSheet.create({
   selfRefBadgeText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#004F6E',
+    color: '#0083B0',
   },
   statusPillPending: {
     backgroundColor: '#FEF3C7',
@@ -1927,7 +2344,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#D0EDFF',
+    backgroundColor: '#DEF0FD',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2061,7 +2478,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#D0EDFF',
+    backgroundColor: '#DEF0FD',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -2119,7 +2536,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   invoiceBadge: {
-    backgroundColor: '#D0EDFF',
+    backgroundColor: '#DEF0FD',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -2127,7 +2544,7 @@ const styles = StyleSheet.create({
   invoiceBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#004F6E',
+    color: '#0083B0',
   },
   divider: {
     height: 1,
@@ -2204,14 +2621,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#D0EDFF',
+    backgroundColor: '#DEF0FD',
     padding: 8,
     borderRadius: 8,
     marginTop: 8,
   },
   earnedPointsText: {
     fontSize: 11.5,
-    color: '#004F6E',
+    color: '#0083B0',
   },
 
   payModeOption: {
@@ -2314,39 +2731,53 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0A2540',
   },
-  imageRefVictoryScrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 26,
+  transparentVictoryOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(10, 25, 47, 0.94)',
+    justifyContent: 'center',
+    paddingTop: 40,
+  },
+  victoryTopCloseBtn: {
+    position: 'absolute',
+    top: 48,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+  imageRefVictoryScrollContent: {
+    paddingHorizontal: 0,
+    paddingTop: 70,
+    paddingBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexGrow: 1,
   },
   imageRefHeaderTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
     color: '#FFFFFF',
     textAlign: 'center',
     marginTop: 10,
-    marginBottom: 6,
+    marginBottom: 8,
+    paddingHorizontal: 16,
     letterSpacing: -0.3,
   },
-  imageRefSubTitle: {
-    fontSize: 13.5,
-    fontWeight: '500',
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
   imageRefGraphicContainer: {
-    width: 220,
-    height: 180,
+    width: '100%',
+    height: 540,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    marginVertical: 10,
+    marginVertical: 0,
   },
   imageRefGiftBoxArt: {
-    width: 160,
-    height: 160,
-    borderRadius: 20,
+    width: '100%',
+    height: '100%',
   },
   floatingCoinWrap1: {
     position: 'absolute',
@@ -2432,11 +2863,181 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 8,
   },
-  rewardSummaryBannerText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#38BDF8',
+  modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxWidth: 480,
+    shadowColor: '#0083B0',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 10,
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  modalHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F253E',
+  },
+  modalHeaderSub: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paySummaryBox: {
+    backgroundColor: '#DEF0FD',
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  paySummaryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0369A1',
+    textAlign: 'center',
+  },
+  paySummaryAmount: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#0083B0',
+    marginTop: 4,
+  },
+  methodSectionHeader: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  methodOptionCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    marginBottom: 10,
+  },
+  methodOptionCardSelected: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#0083B0',
+  },
+  methodRadioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  radioCircleActive: {
+    borderColor: '#0083B0',
+  },
+  radioInnerDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#0083B0',
+  },
+  methodTitle: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0F253E',
+  },
+  methodSubtitle: {
+    fontSize: 11.5,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  upiAppsRow: {
+    flexDirection: 'row',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    gap: 8,
+  },
+  upiAppPill: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  upiAppPillActive: {
+    backgroundColor: '#0083B0',
+    borderColor: '#0083B0',
+  },
+  upiAppPillText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  upiAppPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  confirmPayBtn: {
+    backgroundColor: '#0083B0',
+    borderRadius: 14,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: '#0083B0',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  confirmPayBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  opBadgePill: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  opBadgeText: {
+    color: '#0284C7',
+    fontSize: 9.5,
+    fontWeight: '800',
   },
 });
 

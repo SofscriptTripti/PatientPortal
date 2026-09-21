@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
   useWindowDimensions,
   BackHandler,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
@@ -18,11 +21,14 @@ import { UserSession, PatientMember } from './types';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
 import IMAGES from './imageAssets';
+import { INITIAL_PATIENTS } from './mockData';
 
 interface AddMemberScreenProps {
   userSession: UserSession;
+  memberToEdit?: PatientMember | null;
   onBack: () => void;
   onMemberAdded: (member: PatientMember) => void;
+  onMemberUpdated?: (member: PatientMember) => void;
 }
 
 const RELATIONS_LIST = [
@@ -56,8 +62,10 @@ const GENERATED_YEARS = Array.from({ length: 97 }, (_, i) => 2026 - i);
 
 export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
   userSession,
+  memberToEdit,
   onBack,
   onMemberAdded,
+  onMemberUpdated,
 }) => {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -66,16 +74,56 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
 
   const scrollViewRef = React.useRef<any>(null);
 
+  // Dynamic keyboard padding state
+  const [keyboardExtraPadding, setKeyboardExtraPadding] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardExtraPadding(e.endCoordinates.height);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardExtraPadding(0);
+      }
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const initialRel = memberToEdit ? memberToEdit.relation : '';
+  const isStandardRel = RELATIONS_LIST.includes(initialRel);
+
   // Form State
-  const [fullName, setFullName] = useState('');
-  const [contactNo, setContactNo] = useState('');
-  const [gender, setGender] = useState<'M' | 'F' | 'Other' | ''>('');
-  const [relation, setRelation] = useState<string>('');
-  const [customRelation, setCustomRelation] = useState('');
-  const [dob, setDob] = useState('');
-  const [addressLine1, setAddressLine1] = useState('');
-  const [addressLine2, setAddressLine2] = useState('');
-  const [aadhaarNo, setAadhaarNo] = useState('');
+  const [fullName, setFullName] = useState(memberToEdit ? memberToEdit.name : '');
+  const [contactNo, setContactNo] = useState(memberToEdit ? (memberToEdit.mobileNumber || '') : '');
+  const [gender, setGender] = useState<'M' | 'F' | 'Other' | ''>(
+    memberToEdit ? (memberToEdit.sex as any || (memberToEdit.genderType === 'F' ? 'F' : 'M')) : ''
+  );
+  const [relation, setRelation] = useState<string>(
+    memberToEdit ? (isStandardRel ? initialRel : 'Other') : ''
+  );
+  const [customRelation, setCustomRelation] = useState(
+    memberToEdit && !isStandardRel ? initialRel : ''
+  );
+  const [dob, setDob] = useState(memberToEdit ? (memberToEdit.dob || '') : '');
+  const [addressLine1, setAddressLine1] = useState(
+    memberToEdit ? (memberToEdit.addressLine1 || memberToEdit.address || '') : ''
+  );
+  const [addressLine2, setAddressLine2] = useState(
+    memberToEdit ? (memberToEdit.addressLine2 || '') : ''
+  );
+  const [aadhaarNo, setAadhaarNo] = useState(
+    memberToEdit ? (memberToEdit.aadhaarNo || '') : ''
+  );
+  const [email, setEmail] = useState(
+    memberToEdit ? (memberToEdit.email || '') : ''
+  );
 
   // Validation Errors state
   const [errors, setErrors] = useState<{
@@ -285,6 +333,49 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
 
     setErrors({});
 
+    if (memberToEdit) {
+      setLoaderState({
+        visible: true,
+        message: 'Updating Member Details...',
+        subtitle: `Saving changes for ${fullName.trim()}`,
+      });
+
+      setTimeout(() => {
+        const fullAddress = [addressLine1.trim(), addressLine2.trim()].filter(Boolean).join(', ');
+        const finalRelation = relation === 'Other' ? (customRelation.trim() || 'Other') : relation;
+        const validGender: 'M' | 'F' | 'Other' = gender || 'M';
+
+        const updatedMember: PatientMember = {
+          ...memberToEdit,
+          name: fullName.trim(),
+          relation: finalRelation,
+          sex: validGender,
+          age: calculatedAge || memberToEdit.age || '26 Y',
+          mobileNumber: cleanContact,
+          genderType: validGender === 'F' ? 'F' : 'M',
+          dob: dob.trim(),
+          addressLine1: addressLine1.trim(),
+          addressLine2: addressLine2.trim(),
+          address: fullAddress,
+          aadhaarNo: aadhaarNo.trim(),
+          email: email.trim(),
+        };
+
+        const idx = INITIAL_PATIENTS.findIndex((p) => p.id === memberToEdit.id);
+        if (idx !== -1) {
+          INITIAL_PATIENTS[idx] = updatedMember;
+        }
+
+        setLoaderState({ visible: false });
+        if (onMemberUpdated) {
+          onMemberUpdated(updatedMember);
+        } else {
+          onMemberAdded(updatedMember);
+        }
+      }, 700);
+      return;
+    }
+
     setLoaderState({
       visible: true,
       message: 'Linking Family Member...',
@@ -312,6 +403,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
         addressLine2: addressLine2.trim(),
         address: fullAddress,
         aadhaarNo: aadhaarNo.trim(),
+        email: email.trim(),
         dateAdded: 'Today',
       };
 
@@ -360,17 +452,17 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
           <View style={[styles.headerSideGroup, isTablet && { width: 44 }]}>
             <TouchableOpacity
               onPress={onBack}
-              style={[styles.headerBackBtn, isTablet && { width: 42, height: 42, borderRadius: 21 }]}
+              style={[styles.headerBackBtn, { backgroundColor: colors.primaryLight, borderColor: colors.primary }, isTablet && { width: 42, height: 42, borderRadius: 21 }]}
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <AppIcon name="back" size={isTablet ? 24 : 20} color="#0083B0" />
+              <AppIcon name="back" size={isTablet ? 24 : 20} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.headerCenterGroup}>
-            <Text style={[styles.headerTitleCentered, isTablet && { fontSize: 22 }]}>
-              Add Family Member
+            <Text style={[styles.headerTitleCentered, { color: colors.primary }, isTablet && { fontSize: 22 }]}>
+              {memberToEdit ? 'Edit Family Member Details' : 'Add Family Member'}
             </Text>
           </View>
 
@@ -378,19 +470,24 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
         </View>
 
         {/* MAIN FORM SCROLL AREA */}
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.mainScrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            {
-              paddingHorizontal: isTablet ? 20 : 16,
-              paddingTop: isTablet ? 16 : 14,
-              paddingBottom: 120,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
         >
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.mainScrollView}
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingHorizontal: isTablet ? 20 : 16,
+                paddingTop: isTablet ? 16 : 14,
+                paddingBottom: Math.max(insets.bottom + 80, 95) + keyboardExtraPadding,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           {/* FORM CARD CONTAINER */}
           <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             {/* 1. FULL NAME */}
@@ -406,7 +503,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                   errors.fullName ? { borderWidth: 1.8 } : undefined,
                 ]}
               >
-                <AppIcon name="user" size={18} color={errors.fullName ? '#EF4444' : '#0083B0'} />
+                <AppIcon name="user" size={18} color={errors.fullName ? '#EF4444' : colors.primary} />
                 <TextInput
                   style={[styles.textInput, { color: colors.textPrimary }]}
                   placeholder="Enter full name as per Govt. ID"
@@ -439,10 +536,10 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                   errors.contactNo ? { borderWidth: 1.8 } : undefined,
                 ]}
               >
-                <View style={styles.countryPrefixBadge}>
-                  <Text style={styles.countryPrefixText}>+91</Text>
+                <View style={[styles.countryPrefixBadge, { backgroundColor: colors.primaryLight }]}>
+                  <Text style={[styles.countryPrefixText, { color: colors.primary }]}>+91</Text>
                 </View>
-                <AppIcon name="phone" size={18} color={errors.contactNo ? '#EF4444' : '#0083B0'} />
+                <AppIcon name="phone" size={18} color={errors.contactNo ? '#EF4444' : colors.primary} />
                 <TextInput
                   style={[styles.textInput, { color: colors.textPrimary }]}
                   placeholder="Enter 10-digit mobile number"
@@ -462,6 +559,31 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                   <Text style={styles.errorInlineText}>{errors.contactNo}</Text>
                 </View>
               ) : null}
+            </View>
+
+            {/* EMAIL ID (OPTIONAL) */}
+            <View style={styles.formGroup}>
+              <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>
+                Email ID <Text style={{ fontSize: 12, color: colors.textMuted, fontWeight: '400' }}>(Optional)</Text>
+              </Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC' },
+                  { borderColor: colors.border },
+                ]}
+              >
+                <AppIcon name="email" size={18} color={colors.primary} />
+                <TextInput
+                  style={[styles.textInput, { color: colors.textPrimary }]}
+                  placeholder="Enter email address (optional)"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
             </View>
 
             {/* 3. GENDER SELECTION */}
@@ -490,7 +612,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                         style={[
                           styles.genderPill,
                           isSelected
-                            ? styles.genderPillActive
+                            ? [styles.genderPillActive, { backgroundColor: colors.primary, borderColor: colors.primary }]
                             : { backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9', borderColor: colors.border },
                         ]}
                         onPress={() => {
@@ -549,7 +671,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                         style={[
                           styles.relationChip,
                           isSelected
-                            ? styles.relationChipActive
+                            ? [styles.relationChipActive, { backgroundColor: colors.primary, borderColor: colors.primary }]
                             : { backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9', borderColor: colors.border },
                         ]}
                         onPress={() => {
@@ -585,7 +707,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                     errors.customRelation ? { borderWidth: 1.8 } : undefined,
                   ]}
                 >
-                  <AppIcon name="edit" size={18} color={errors.customRelation ? '#EF4444' : '#0083B0'} />
+                  <AppIcon name="edit" size={18} color={errors.customRelation ? '#EF4444' : colors.primary} />
                   <TextInput
                     style={[styles.textInput, { color: colors.textPrimary }]}
                     placeholder="Specify custom relation"
@@ -619,7 +741,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                   Date of Birth (DOB) <Text style={styles.requiredStar}>*</Text>
                 </Text>
                 {calculatedAge ? (
-                  <Text style={styles.calculatedAgeBadge}>Age: {calculatedAge}</Text>
+                  <Text style={[styles.calculatedAgeBadge, { color: colors.primary, backgroundColor: colors.primaryLight }]}>Age: {calculatedAge}</Text>
                 ) : null}
               </View>
               <View
@@ -631,7 +753,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                 ]}
               >
                 <TouchableOpacity onPress={openCalendarPicker} activeOpacity={0.7} style={{ paddingRight: 6 }}>
-                  <AppIcon name="calendar" size={18} color={errors.dob ? '#EF4444' : '#0083B0'} />
+                  <AppIcon name="calendar" size={18} color={errors.dob ? '#EF4444' : colors.primary} />
                 </TouchableOpacity>
                 <TextInput
                   style={[styles.textInput, { color: colors.textPrimary, flex: 1 }]}
@@ -643,7 +765,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                   onChangeText={handleDobChange}
                 />
                 <TouchableOpacity
-                  style={styles.openCalBtnIconOnly}
+                  style={[styles.openCalBtnIconOnly, { backgroundColor: colors.primary }]}
                   onPress={openCalendarPicker}
                   activeOpacity={0.8}
                 >
@@ -671,7 +793,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                   errors.aadhaarNo ? { borderWidth: 1.8 } : undefined,
                 ]}
               >
-                <AppIcon name="shield-check" size={18} color={errors.aadhaarNo ? '#EF4444' : '#0083B0'} />
+                <AppIcon name="shield-check" size={18} color={errors.aadhaarNo ? '#EF4444' : colors.primary} />
                 <TextInput
                   style={[styles.textInput, { color: colors.textPrimary }]}
                   placeholder="Enter 12-digit Aadhaar number"
@@ -703,7 +825,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                   errors.addressLine1 ? { borderWidth: 1.8 } : undefined,
                 ]}
               >
-                <AppIcon name="location" size={18} color={errors.addressLine1 ? '#EF4444' : '#0083B0'} />
+                <AppIcon name="location" size={18} color={errors.addressLine1 ? '#EF4444' : colors.primary} />
                 <TextInput
                   style={[styles.textInput, { color: colors.textPrimary }]}
                   placeholder="House/Flat No., Building, Street Name"
@@ -729,7 +851,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                 Address Line 2 <Text style={{ fontSize: 11, fontWeight: '500', color: colors.textSecondary }}>(Optional)</Text>
               </Text>
               <View style={[styles.inputContainer, { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC', borderColor: colors.border }]}>
-                <AppIcon name="location" size={18} color="#0083B0" />
+                <AppIcon name="location" size={18} color={colors.primary} />
                 <TextInput
                   style={[styles.textInput, { color: colors.textPrimary }]}
                   placeholder="Landmark, Area, City, State & Pincode"
@@ -754,14 +876,17 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
           ]}
         >
           <TouchableOpacity
-            style={styles.saveMemberBtn}
+            style={[styles.saveMemberBtn, { backgroundColor: colors.primary }]}
             onPress={handleSaveMember}
             activeOpacity={0.88}
           >
-            <AppIcon name="user-plus" size={18} color="#FFFFFF" />
-            <Text style={styles.saveMemberBtnText}>Add Member</Text>
+            <AppIcon name={memberToEdit ? "check" : "user-plus"} size={18} color="#FFFFFF" />
+            <Text style={styles.saveMemberBtnText}>
+              {memberToEdit ? "Save Updated Details" : "Add Member"}
+            </Text>
           </TouchableOpacity>
         </View>
+        </KeyboardAvoidingView>
 
         {/* Universal Loader */}
         <UniversalLoader
@@ -782,8 +907,8 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
               {/* Modal Header */}
               <View style={styles.calHeaderRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={styles.calHeaderIconWrap}>
-                    <AppIcon name="calendar" size={18} color="#0083B0" />
+                  <View style={[styles.calHeaderIconWrap, { backgroundColor: colors.primaryLight }]}>
+                    <AppIcon name="calendar" size={18} color={colors.primary} />
                   </View>
                   <Text style={[styles.calHeaderTitle, { color: colors.textPrimary }]}>Select Date of Birth</Text>
                 </View>
@@ -798,49 +923,49 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
               {/* Month & Year Navigation Bar */}
               <View style={styles.calNavRow}>
                 <TouchableOpacity
-                  style={styles.calNavArrowBtn}
+                  style={[styles.calNavArrowBtn, { backgroundColor: colors.primaryLight }]}
                   onPress={handlePrevMonth}
                   activeOpacity={0.7}
                 >
-                  <AppIcon name="back" size={18} color="#0083B0" />
+                  <AppIcon name="back" size={18} color={colors.primary} />
                 </TouchableOpacity>
 
                 {/* Month Selector Pill */}
                 <TouchableOpacity
-                  style={[styles.calSelectPill, showMonthGrid && styles.calSelectPillActive]}
+                  style={[styles.calSelectPill, { backgroundColor: colors.primaryLight }, showMonthGrid && { backgroundColor: colors.primary }]}
                   onPress={() => {
                     setShowMonthGrid((prev) => !prev);
                     setShowYearGrid(false);
                   }}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.calSelectPillText, showMonthGrid && styles.calSelectPillTextActive]}>
+                  <Text style={[styles.calSelectPillText, { color: colors.primary }, showMonthGrid && { color: '#FFFFFF' }]}>
                     {MONTH_NAMES[calendarMonth]}
                   </Text>
-                  <AppIcon name="chevron-down" size={13} color={showMonthGrid ? '#FFFFFF' : '#0083B0'} />
+                  <AppIcon name="chevron-down" size={13} color={showMonthGrid ? '#FFFFFF' : colors.primary} />
                 </TouchableOpacity>
 
                 {/* Year Selector Pill */}
                 <TouchableOpacity
-                  style={[styles.calSelectPill, showYearGrid && styles.calSelectPillActive]}
+                  style={[styles.calSelectPill, { backgroundColor: colors.primaryLight }, showYearGrid && { backgroundColor: colors.primary }]}
                   onPress={() => {
                     setShowYearGrid((prev) => !prev);
                     setShowMonthGrid(false);
                   }}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.calSelectPillText, showYearGrid && styles.calSelectPillTextActive]}>
+                  <Text style={[styles.calSelectPillText, { color: colors.primary }, showYearGrid && { color: '#FFFFFF' }]}>
                     {calendarYear}
                   </Text>
-                  <AppIcon name="chevron-down" size={13} color={showYearGrid ? '#FFFFFF' : '#0083B0'} />
+                  <AppIcon name="chevron-down" size={13} color={showYearGrid ? '#FFFFFF' : colors.primary} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.calNavArrowBtn}
+                  style={[styles.calNavArrowBtn, { backgroundColor: colors.primaryLight }]}
                   onPress={handleNextMonth}
                   activeOpacity={0.7}
                 >
-                  <AppIcon name="chevron-right" size={18} color="#0083B0" />
+                  <AppIcon name="chevron-right" size={18} color={colors.primary} />
                 </TouchableOpacity>
               </View>
 
@@ -859,7 +984,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                             style={[
                               styles.yearGridItem,
                               { backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9' },
-                              isSelected && styles.yearGridItemActive,
+                              isSelected && [styles.yearGridItemActive, { backgroundColor: colors.primary }],
                             ]}
                             onPress={() => {
                               setCalendarYear(y);
@@ -895,7 +1020,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                           style={[
                             styles.monthGridItem,
                             { backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9' },
-                            isSelected && styles.monthGridItemActive,
+                            isSelected && [styles.monthGridItemActive, { backgroundColor: colors.primary }],
                           ]}
                           onPress={() => {
                             setCalendarMonth(idx);
@@ -946,7 +1071,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                           style={[
                             styles.calDayCell,
                             { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC' },
-                            isSelected && styles.calDayCellActive,
+                            isSelected && [styles.calDayCellActive, { backgroundColor: colors.primary, shadowColor: colors.primary }],
                           ]}
                           onPress={() => setCalendarDay(dayNum)}
                           activeOpacity={0.8}
@@ -976,7 +1101,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                 
                   <TouchableOpacity
-                    style={styles.calConfirmBtn}
+                    style={[styles.calConfirmBtn, { backgroundColor: colors.primary }]}
                     onPress={handleConfirmCalendarDate}
                     activeOpacity={0.85}
                   >

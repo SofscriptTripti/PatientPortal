@@ -15,6 +15,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
 import IMAGES from './imageAssets';
+import { useTheme } from './ThemeContext';
 
 interface MobileEntryScreenProps {
   mobileNumber: string;
@@ -33,6 +34,7 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 600 || height >= 950;
   const isSmallMobile = width < 380;
+  const { isDark, colors } = useTheme();
   
   // Responsive sizing for hero image and typography
   const heroImgWidth = isTablet ? 380 : (isSmallMobile ? 140 : 155);
@@ -43,15 +45,16 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
   const heroSubLineHeight = isTablet ? 24 : (isSmallMobile ? 14.5 : 16);
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
       >
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
             {
+              backgroundColor: colors.background,
               paddingBottom: Math.max(insets.bottom, 12),
             },
           ]}
@@ -59,11 +62,11 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
-          <View style={styles.screenOuter}>
+          <View style={[styles.screenOuter, { backgroundColor: colors.background }]}>
             {/* TOP SECTION: HEADER + HERO + MOBILE NUMBER CARD */}
             <View style={styles.topSixtySection}>
               {/* TOP HEADER BAR */}
-              <View style={[styles.topHeaderBar, isTablet && { paddingTop: 24, paddingBottom: 10 }]}>
+              <View style={[styles.topHeaderBar, { backgroundColor: colors.background }, isTablet && { paddingTop: 24, paddingBottom: 10 }]}>
                 <View style={styles.brandRow}>
                   <Image
                     source={IMAGES.patientPortalLogo}
@@ -73,10 +76,10 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
                   />
                   <View style={styles.brandTextCol}>
                     <View style={styles.brandTitleRow}>
-                      <Text style={[styles.brandTitleDark, isTablet && { fontSize: 30 }]}>Patient </Text>
-                      <Text style={[styles.brandTitleTeal, isTablet && { fontSize: 30 }]}>Portal</Text>
+                      <Text style={[styles.brandTitleDark, { color: colors.textPrimary }, isTablet && { fontSize: 30 }]}>Patient </Text>
+                      <Text style={[styles.brandTitleTeal, { color: colors.primary }, isTablet && { fontSize: 30 }]}>Portal</Text>
                     </View>
-                    <Text style={[styles.brandSubtitle, isTablet && { fontSize: 15 }]}>
+                    <Text style={[styles.brandSubtitle, { color: colors.textSecondary }, isTablet && { fontSize: 15 }]}>
                       Care Today. Healthier Tomorrow.
                     </Text>
                   </View>
@@ -132,16 +135,16 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
               </View>
 
               {/* FLOATING MOBILE NUMBER INPUT CARD */}
-              <View style={[styles.inputCard, isTablet && { marginHorizontal: 28, padding: 26, marginTop: -12, marginBottom: 8 }]}>
+              <View style={[styles.inputCard, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#EDF2F7' }, isTablet && { marginHorizontal: 28, padding: 26, marginTop: -12, marginBottom: 8 }]}>
                 <View style={styles.cardHeaderRow}>
-                  <Text style={[styles.cardTitle, isTablet && { fontSize: 18 }]}>Mobile Number</Text>
-                  <Text style={[styles.cardSubtitle, isTablet && { fontSize: 12.5 }]}>
+                  <Text style={[styles.cardTitle, { color: colors.textPrimary }, isTablet && { fontSize: 18 }]}>Mobile Number</Text>
+                  <Text style={[styles.cardSubtitle, { color: colors.textSecondary }, isTablet && { fontSize: 12.5 }]}>
                     We'll send an OTP to this number
                   </Text>
                 </View>
 
                 {/* Mobile Input Field */}
-                <View style={[styles.mobileInputRow, isTablet && { height: 56 }]}>
+                <View style={[styles.mobileInputRow, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0' }, isTablet && { height: 56 }]}>
                   <View style={styles.flagContainer}>
                     <View style={styles.flagIconBox}>
                       <View style={styles.flagStripeSaffron} />
@@ -150,15 +153,15 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
                       </View>
                       <View style={styles.flagStripeGreen} />
                     </View>
-                    <Text style={[styles.countryCodeText, isTablet && { fontSize: 17 }]}>+91</Text>
+                    <Text style={[styles.countryCodeText, { color: colors.textPrimary }, isTablet && { fontSize: 17 }]}>+91</Text>
                   </View>
 
                   <View style={styles.inputDivider} />
 
                   <TextInput
-                    style={[styles.mobileTextInput, isTablet && { fontSize: 17 }]}
+                    style={[styles.mobileTextInput, { color: colors.textPrimary }, isTablet && { fontSize: 17 }]}
                     placeholder="Enter your mobile number"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={colors.textSecondary || '#94A3B8'}
                     keyboardType="number-pad"
                     maxLength={10}
                     value={mobileNumber}
@@ -179,39 +182,34 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
 
                 {/* Gradient Send OTP Button */}
                 <TouchableOpacity
-                  style={[styles.sendOtpBtnWrapper, isTablet && { height: 56, marginTop: 18 }]}
+                  style={[styles.sendOtpBtnWrapper, { shadowColor: colors.primary }, isTablet && { height: 56, marginTop: 18 }]}
                   onPress={onMobileSubmit}
                   activeOpacity={0.88}
                 >
-                  <ImageBackground
-                    source={IMAGES.btnGradientBg}
-                    fadeDuration={0}
-                    style={styles.sendOtpGradient}
-                    imageStyle={styles.sendOtpGradientImg}
-                  >
+                  <View style={[styles.sendOtpGradient, { backgroundColor: colors.primary }]}>
                     <Text style={[styles.sendOtpBtnText, isTablet && { fontSize: 17.5 }]}>Send OTP</Text>
                     <View style={styles.sendOtpArrowBox}>
                       <AppIcon name="arrow-right" size={20} color="#FFFFFF" />
                     </View>
-                  </ImageBackground>
+                  </View>
                 </TouchableOpacity>
 
                 {/* Don't have Acc ? Register Now (Left Side) */}
                 <View style={[styles.registerPromptRow, isTablet && { marginTop: 14 }]}>
-                  <Text style={[styles.dontHaveAccText, isTablet && { fontSize: 14.5 }]}>Don't have Acc ? </Text>
+                  <Text style={[styles.dontHaveAccText, { color: colors.textSecondary }, isTablet && { fontSize: 14.5 }]}>Don't have Acc ? </Text>
                   <TouchableOpacity
                     onPress={onOpenRegister}
                     activeOpacity={0.7}
                     hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
                   >
-                    <Text style={[styles.registerNowLink, isTablet && { fontSize: 14.5 }]}>Register Now.</Text>
+                    <Text style={[styles.registerNowLink, { color: colors.primary }, isTablet && { fontSize: 14.5 }]}>Register Now.</Text>
                   </TouchableOpacity>
                 </View>
 
                 {/* Security trust badge */}
                 <View style={[styles.secureBadgeRow, isTablet && { marginTop: 16 }]}>
                   <AppIcon name="shield-check" size={16} color="#94A3B8" />
-                  <Text style={[styles.secureBadgeText, isTablet && { fontSize: 13 }]}>
+                  <Text style={[styles.secureBadgeText, { color: colors.textSecondary }, isTablet && { fontSize: 13 }]}>
                     Your information is secure with us
                   </Text>
                 </View>
@@ -226,13 +224,13 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
                   <View
                     style={[
                       styles.featureIconBox,
-                      { backgroundColor: '#E0F2FE' },
+                      { backgroundColor: colors.primaryLight },
                       isTablet && { width: 58, height: 58, borderRadius: 29 },
                     ]}
                   >
-                    <AppIcon name="calendar" size={isTablet ? 26 : 24} color="#2563EB" />
+                    <AppIcon name="calendar" size={isTablet ? 26 : 24} color={colors.primary} />
                   </View>
-                  <Text style={[styles.featureLabel, isTablet && { fontSize: 13.5, lineHeight: 18 }]}>
+                  <Text style={[styles.featureLabel, { color: colors.textPrimary }, isTablet && { fontSize: 13.5, lineHeight: 18 }]}>
                     Book{'\n'}Appointments
                   </Text>
                 </View>
@@ -243,13 +241,13 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
                   <View
                     style={[
                       styles.featureIconBox,
-                      { backgroundColor: '#D4F7F2' },
+                      { backgroundColor: colors.primaryLight },
                       isTablet && { width: 58, height: 58, borderRadius: 29 },
                     ]}
                   >
-                    <AppIcon name="document" size={isTablet ? 26 : 24} color="#0D9488" />
+                    <AppIcon name="document" size={isTablet ? 26 : 24} color={colors.accent} />
                   </View>
-                  <Text style={[styles.featureLabel, isTablet && { fontSize: 13.5, lineHeight: 18 }]}>
+                  <Text style={[styles.featureLabel, { color: colors.textPrimary }, isTablet && { fontSize: 13.5, lineHeight: 18 }]}>
                     Access{'\n'}Reports
                   </Text>
                 </View>
@@ -260,13 +258,13 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
                   <View
                     style={[
                       styles.featureIconBox,
-                      { backgroundColor: '#EDE9FE' },
+                      { backgroundColor: colors.primaryLight },
                       isTablet && { width: 58, height: 58, borderRadius: 29 },
                     ]}
                   >
-                    <AppIcon name="users" size={isTablet ? 26 : 24} color="#7C3AED" />
+                    <AppIcon name="users" size={isTablet ? 26 : 24} color={colors.primary} />
                   </View>
-                  <Text style={[styles.featureLabel, isTablet && { fontSize: 13.5, lineHeight: 18 }]}>
+                  <Text style={[styles.featureLabel, { color: colors.textPrimary }, isTablet && { fontSize: 13.5, lineHeight: 18 }]}>
                     Stay{'\n'}Connected
                   </Text>
                 </View>

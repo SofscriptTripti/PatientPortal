@@ -15,6 +15,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
 import IMAGES from './imageAssets';
+import { useTheme } from './ThemeContext';
 
 interface OtpScreenProps {
   mobileNumber: string;
@@ -42,17 +43,19 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
   const isTablet = width >= 600 || height >= 950;
   const pinInputRef = useRef<any>(null);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const { isDark, colors } = useTheme();
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
       >
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
             {
+              backgroundColor: colors.background,
               minHeight: height - insets.top - insets.bottom,
               paddingBottom: Math.max(insets.bottom, 4),
             },
@@ -61,15 +64,15 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
           keyboardShouldPersistTaps="handled"
           bounces={false}
         >
-          <View style={[styles.screenOuter, { minHeight: height - insets.top - insets.bottom - 4 }]}>
+          <View style={[styles.screenOuter, { backgroundColor: colors.background, minHeight: height - insets.top - insets.bottom - 4 }]}>
             {/* Top Bar with Back Button & Need Help */}
             <View style={[styles.otpTopBar, isTablet && { paddingTop: 20, paddingBottom: 10 }]}>
               <TouchableOpacity
-                style={styles.otpBackCircleBtn}
+                style={[styles.otpBackCircleBtn, { backgroundColor: isDark ? colors.surface : '#F1F5F9' }]}
                 onPress={onBack}
                 activeOpacity={0.7}
               >
-                <AppIcon name="back" size={20} color="#0B2341" />
+                <AppIcon name="back" size={20} color={colors.textPrimary} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -77,7 +80,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
                 style={styles.needHelpBtn}
                 activeOpacity={0.7}
               >
-                <Text style={styles.needHelpText}>Need Help?</Text>
+                <Text style={[styles.needHelpText, { color: colors.primary }]}>Need Help?</Text>
               </TouchableOpacity>
             </View>
 
@@ -92,10 +95,10 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
                 />
                 <View style={styles.brandTextCol}>
                   <View style={styles.brandTitleRow}>
-                    <Text style={[styles.brandTitleDark, isTablet && { fontSize: 30 }]}>Patient </Text>
-                    <Text style={[styles.brandTitleTeal, isTablet && { fontSize: 30 }]}>Portal</Text>
+                    <Text style={[styles.brandTitleDark, { color: colors.textPrimary }, isTablet && { fontSize: 30 }]}>Patient </Text>
+                    <Text style={[styles.brandTitleTeal, { color: colors.primary }, isTablet && { fontSize: 30 }]}>Portal</Text>
                   </View>
-                  <Text style={[styles.brandSubtitle, isTablet && { fontSize: 15 }]}>
+                  <Text style={[styles.brandSubtitle, { color: colors.textSecondary }, isTablet && { fontSize: 15 }]}>
                     Care Closer to You
                   </Text>
                 </View>
@@ -104,19 +107,19 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
 
             {/* Heading Section */}
             <View style={styles.otpHeadingSection}>
-              <Text style={[styles.otpMainTitle, isTablet && { fontSize: 28 }]}>Enter OTP</Text>
-              <Text style={[styles.otpInstructionText, isTablet && { fontSize: 14.5 }]}>
+              <Text style={[styles.otpMainTitle, { color: colors.textPrimary }, isTablet && { fontSize: 28 }]}>Enter OTP</Text>
+              <Text style={[styles.otpInstructionText, { color: colors.textSecondary }, isTablet && { fontSize: 14.5 }]}>
                 We have sent a 6-digit OTP to
               </Text>
               <TouchableOpacity
-                style={styles.otpPhoneBadge}
+                style={[styles.otpPhoneBadge, { backgroundColor: colors.primaryLight }]}
                 onPress={onBack}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.otpPhoneText, isTablet && { fontSize: 16 }]}>
+                <Text style={[styles.otpPhoneText, { color: colors.primary }, isTablet && { fontSize: 16 }]}>
                   +91 {mobileNumber || '98765 43210'}
                 </Text>
-                <AppIcon name="edit" size={13} color="#0284C7" style={{ marginLeft: 6 }} />
+                <AppIcon name="edit" size={13} color={colors.primary} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             </View>
 
@@ -134,15 +137,16 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
                     key={index}
                     style={[
                       styles.otpBox,
+                      { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#CBD5E1' },
                       isTablet && { width: 54, height: 64, borderRadius: 14 },
-                      digit ? styles.otpBoxFilled : null,
-                      isFocused ? styles.otpBoxActive : null,
+                      digit ? [styles.otpBoxFilled, { borderColor: colors.accent }] : null,
+                      isFocused ? [styles.otpBoxActive, { borderColor: colors.primary, shadowColor: colors.primary }] : null,
                     ]}
                   >
                     {digit ? (
-                      <Text style={[styles.otpDigitText, isTablet && { fontSize: 25 }]}>{digit}</Text>
+                      <Text style={[styles.otpDigitText, { color: colors.textPrimary }, isTablet && { fontSize: 25 }]}>{digit}</Text>
                     ) : isFocused ? (
-                      <View style={styles.otpCursorBar} />
+                      <View style={[styles.otpCursorBar, { backgroundColor: colors.primary }]} />
                     ) : null}
                   </View>
                 );
@@ -165,7 +169,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
 
             {/* Resend OTP Timer Row */}
             <View style={styles.otpResendRow}>
-              <Text style={styles.resendNormalText}>Didn't receive OTP? </Text>
+              <Text style={[styles.resendNormalText, { color: colors.textSecondary }]}>Didn't receive OTP? </Text>
               <TouchableOpacity
                 onPress={onResendOtp}
                 disabled={resendTimer > 0}
@@ -174,6 +178,7 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
                 <Text
                   style={[
                     styles.resendTimerText,
+                    { color: colors.primary },
                     resendTimer === 0 && styles.resendClickableText,
                   ]}
                 >
@@ -191,21 +196,16 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
               ]}
             >
               <TouchableOpacity
-                style={[styles.sendOtpBtnWrapper, isTablet && { height: 56 }]}
+                style={[styles.sendOtpBtnWrapper, { shadowColor: colors.primary }, isTablet && { height: 56 }]}
                 onPress={() => onOtpSubmit()}
                 activeOpacity={0.88}
               >
-                <ImageBackground
-                  source={IMAGES.btnGradientBg}
-                  fadeDuration={0}
-                  style={styles.sendOtpGradient}
-                  imageStyle={styles.sendOtpGradientImg}
-                >
+                <View style={[styles.sendOtpGradient, { backgroundColor: colors.primary }]}>
                   <Text style={[styles.sendOtpBtnText, isTablet && { fontSize: 18 }]}>Verify OTP</Text>
                   <View style={styles.sendOtpArrowBox}>
                     <AppIcon name="arrow-right" size={20} color="#FFFFFF" />
                   </View>
-                </ImageBackground>
+                </View>
               </TouchableOpacity>
             </View>
 
@@ -219,13 +219,13 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
               />
 
               {/* Security & Encrypted Trust Badge floating on top of wave */}
-              <View style={[styles.otpSecurityBadge, isTablet && { bottom: 20 }]}>
-                <AppIcon name="shield-check" size={20} color="#0284C7" />
+              <View style={[styles.otpSecurityBadge, { backgroundColor: isDark ? colors.surface : 'rgba(255, 255, 255, 0.92)' }, isTablet && { bottom: 20 }]}>
+                <AppIcon name="shield-check" size={20} color={colors.primary} />
                 <View style={{ marginLeft: 8 }}>
-                  <Text style={[styles.otpSecurityTitle, isTablet && { fontSize: 13.5 }]}>
+                  <Text style={[styles.otpSecurityTitle, { color: colors.textPrimary }, isTablet && { fontSize: 13.5 }]}>
                     Secure & Encrypted
                   </Text>
-                  <Text style={[styles.otpSecuritySubtitle, isTablet && { fontSize: 11.5 }]}>
+                  <Text style={[styles.otpSecuritySubtitle, { color: colors.textSecondary }, isTablet && { fontSize: 11.5 }]}>
                     Your privacy is our priority
                   </Text>
                 </View>

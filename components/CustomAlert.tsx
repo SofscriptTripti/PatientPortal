@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import AppIcon, { IconType } from './Icons';
 import { useTheme } from './ThemeContext';
+import { ColorPalette } from './themeColors';
 
 export interface AlertButtonConfig {
   text?: string;
@@ -74,9 +75,11 @@ initAlertOverride();
 /**
  * Helper to determine icon & color theme based on title & buttons
  */
-const getAlertTheme = (title: string, buttons?: AlertButtonConfig[]) => {
+const getAlertTheme = (title: string, buttons?: AlertButtonConfig[], themeColors?: { primary: string; primaryLight: string }) => {
   const lowerTitle = title.toLowerCase();
   const hasDestructive = buttons?.some((b) => b.style === 'destructive');
+  const primary = themeColors?.primary || '#0083B0';
+  const primaryLight = themeColors?.primaryLight || '#DEF0FD';
 
   if (hasDestructive || lowerTitle.includes('logout') || lowerTitle.includes('remove') || lowerTitle.includes('delete')) {
     return {
@@ -91,90 +94,90 @@ const getAlertTheme = (title: string, buttons?: AlertButtonConfig[]) => {
   if (lowerTitle.includes('success') || lowerTitle.includes('added') || lowerTitle.includes('updated') || lowerTitle.includes('reset') || lowerTitle.includes('sent')) {
     return {
       icon: 'check' as IconType,
-      iconColor: '#0083B0',
-      badgeBg: '#DEF0FD',
-      badgeBorder: '#BAE6FD',
-      accentColor: '#0083B0',
+      iconColor: primary,
+      badgeBg: primaryLight,
+      badgeBorder: primaryLight,
+      accentColor: primary,
     };
   }
 
   if (lowerTitle.includes('bill') || lowerTitle.includes('pay')) {
     return {
       icon: 'wallet-outline' as IconType,
-      iconColor: '#0083B0',
-      badgeBg: '#DEF0FD',
-      badgeBorder: '#BAE6FD',
-      accentColor: '#0083B0',
+      iconColor: primary,
+      badgeBg: primaryLight,
+      badgeBorder: primaryLight,
+      accentColor: primary,
     };
   }
 
   if (lowerTitle.includes('diet')) {
     return {
       icon: 'food-apple-outline' as IconType,
-      iconColor: '#0083B0',
-      badgeBg: '#DEF0FD',
-      badgeBorder: '#BAE6FD',
-      accentColor: '#0083B0',
+      iconColor: primary,
+      badgeBg: primaryLight,
+      badgeBorder: primaryLight,
+      accentColor: primary,
     };
   }
 
   if (lowerTitle.includes('visit') || lowerTitle.includes('appointment')) {
     return {
       icon: 'calendar' as IconType,
-      iconColor: '#0083B0',
-      badgeBg: '#DEF0FD',
-      badgeBorder: '#BAE6FD',
-      accentColor: '#0083B0',
+      iconColor: primary,
+      badgeBg: primaryLight,
+      badgeBorder: primaryLight,
+      accentColor: primary,
     };
   }
 
   if (lowerTitle.includes('family') || lowerTitle.includes('member')) {
     return {
       icon: 'users' as IconType,
-      iconColor: '#0083B0',
-      badgeBg: '#DEF0FD',
-      badgeBorder: '#BAE6FD',
-      accentColor: '#0083B0',
+      iconColor: primary,
+      badgeBg: primaryLight,
+      badgeBorder: primaryLight,
+      accentColor: primary,
     };
   }
 
   if (lowerTitle.includes('pin') || lowerTitle.includes('security')) {
     return {
       icon: 'key' as IconType,
-      iconColor: '#0083B0',
-      badgeBg: '#DEF0FD',
-      badgeBorder: '#BAE6FD',
-      accentColor: '#0083B0',
+      iconColor: primary,
+      badgeBg: primaryLight,
+      badgeBorder: primaryLight,
+      accentColor: primary,
     };
   }
 
   if (lowerTitle.includes('notification')) {
     return {
       icon: 'bell' as IconType,
-      iconColor: '#0083B0',
-      badgeBg: '#DEF0FD',
-      badgeBorder: '#BAE6FD',
-      accentColor: '#0083B0',
+      iconColor: primary,
+      badgeBg: primaryLight,
+      badgeBorder: primaryLight,
+      accentColor: primary,
     };
   }
 
   if (lowerTitle.includes('qr') || lowerTitle.includes('digital medical')) {
     return {
       icon: 'qrcode' as IconType,
-      iconColor: '#0083B0',
-      badgeBg: '#DEF0FD',
-      badgeBorder: '#BAE6FD',
-      accentColor: '#0083B0',
+      iconColor: primary,
+      badgeBg: primaryLight,
+      badgeBorder: primaryLight,
+      accentColor: primary,
     };
   }
 
   if (lowerTitle.includes('report') || lowerTitle.includes('audit') || lowerTitle.includes('record')) {
     return {
       icon: 'document' as IconType,
-      iconColor: '#0083B0',
-      badgeBg: '#DEF0FD',
-      badgeBorder: '#BAE6FD',
-      accentColor: '#0083B0',
+      iconColor: primary,
+      badgeBg: primaryLight,
+      badgeBorder: primaryLight,
+      accentColor: primary,
     };
   }
 
@@ -191,10 +194,10 @@ const getAlertTheme = (title: string, buttons?: AlertButtonConfig[]) => {
   // Default App Theme Notice
   return {
     icon: 'info' as IconType,
-    iconColor: '#0083B0',
-    badgeBg: '#DEF0FD',
-    badgeBorder: '#BAE6FD',
-    accentColor: '#0083B0',
+    iconColor: primary,
+    badgeBg: primaryLight,
+    badgeBorder: primaryLight,
+    accentColor: primary,
   };
 };
 
@@ -265,7 +268,7 @@ export const CustomAlertContainer: React.FC = () => {
     ? alertData.buttons
     : [{ text: 'OK', style: 'default' as const }];
 
-  const theme = getAlertTheme(alertData.title, buttons);
+  const theme = getAlertTheme(alertData.title, buttons, colors);
 
   return (
     <Modal
@@ -337,7 +340,7 @@ export const CustomAlertContainer: React.FC = () => {
                 ? [styles.cancelButton, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]
                 : isDestructive
                 ? styles.destructiveButton
-                : styles.defaultButton;
+                : [styles.defaultButton, { backgroundColor: colors.primary, shadowColor: colors.primary }];
 
               const textStyle: any = isCancel
                 ? [styles.cancelButtonText, { color: colors.textSecondary }]

@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import IMAGES from './imageAssets';
+import { useTheme } from './ThemeContext';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -18,6 +19,7 @@ interface SplashScreenProps {
 export default function SplashScreen({ onFinish, duration = 2500 }: SplashScreenProps) {
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 600 || height >= 950;
+  const { isDark, colors } = useTheme();
 
   // Animations
   const screenFadeAnim = useRef(new Animated.Value(1)).current;
@@ -76,11 +78,12 @@ export default function SplashScreen({ onFinish, duration = 2500 }: SplashScreen
         styles.container,
         {
           opacity: screenFadeAnim,
+          backgroundColor: colors.background,
         },
       ]}
     >
       {/* Decorative Top Accent Glow */}
-      <View style={styles.topAccentBar} />
+      <View style={[styles.topAccentBar, { backgroundColor: colors.primary }]} />
 
       {/* Main Center Branding */}
       <View style={styles.centerContent}>
@@ -90,6 +93,9 @@ export default function SplashScreen({ onFinish, duration = 2500 }: SplashScreen
             styles.logoWrapper,
             isTablet && { width: 124, height: 124, borderRadius: 32 },
             {
+              backgroundColor: isDark ? colors.surface : '#FFFFFF',
+              borderColor: colors.border,
+              shadowColor: colors.primary,
               opacity: logoFadeAnim,
               transform: [{ scale: logoScaleAnim }],
             },
@@ -114,18 +120,18 @@ export default function SplashScreen({ onFinish, duration = 2500 }: SplashScreen
           ]}
         >
           <View style={styles.brandTitleRow}>
-            <Text style={[styles.brandTitleDark, isTablet && { fontSize: 42 }]}>Patient </Text>
-            <Text style={[styles.brandTitleTeal, isTablet && { fontSize: 42 }]}>Portal</Text>
+            <Text style={[styles.brandTitleDark, { color: colors.textPrimary }, isTablet && { fontSize: 42 }]}>Patient </Text>
+            <Text style={[styles.brandTitleTeal, { color: colors.primary }, isTablet && { fontSize: 42 }]}>Portal</Text>
           </View>
-          <Text style={[styles.brandSubtitle, isTablet && { fontSize: 16.5, marginTop: 8 }]}>
+          <Text style={[styles.brandSubtitle, { color: colors.textSecondary }, isTablet && { fontSize: 16.5, marginTop: 8 }]}>
             Care Today. Healthier Tomorrow.
           </Text>
 
           {/* Minimal Animated Pulse Dots */}
           <View style={styles.pulseContainer}>
-            <View style={[styles.pulseDot, { opacity: 0.4 }]} />
-            <View style={[styles.pulseDot, { backgroundColor: '#02AAB0', transform: [{ scale: 1.25 }] }]} />
-            <View style={[styles.pulseDot, { opacity: 0.4 }]} />
+            <View style={[styles.pulseDot, { backgroundColor: colors.primary, opacity: 0.4 }]} />
+            <View style={[styles.pulseDot, { backgroundColor: colors.accent, transform: [{ scale: 1.25 }] }]} />
+            <View style={[styles.pulseDot, { backgroundColor: colors.primary, opacity: 0.4 }]} />
           </View>
         </Animated.View>
       </View>
@@ -147,7 +153,7 @@ export default function SplashScreen({ onFinish, duration = 2500 }: SplashScreen
         {/* Subtle Bottom Trust Mark */}
         <View style={styles.trustBadge}>
           <Text style={[styles.trustBadgeText, isTablet && { fontSize: 13 }]}>
-            Bethany Healthcare • Secure Patient Access
+            Patient Portal • Secure Healthcare Access
           </Text>
         </View>
       </View>

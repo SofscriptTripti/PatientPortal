@@ -13,13 +13,16 @@ import {
   Modal,
   Platform,
   PermissionsAndroid,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
-import { UserSession } from './types';
+import { UserSession, PatientMember } from './types';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
 import IMAGES from './imageAssets';
+import { getActiveMember, getAvatarForMember } from './accountManager';
+import { INITIAL_PATIENTS } from './mockData';
 
 interface CareTicket {
   id: string;
@@ -30,6 +33,8 @@ interface CareTicket {
   date: string;
   status: 'Registered' | 'In Progress' | 'Resolved';
   resolutionTime: string;
+  patientName?: string;
+  relation?: string;
 }
 
 const INITIAL_TICKETS: CareTicket[] = [
@@ -42,6 +47,8 @@ const INITIAL_TICKETS: CareTicket[] = [
     date: 'Yesterday',
     status: 'In Progress',
     resolutionTime: 'Est. 4 hours',
+    patientName: 'Rathi Vijay Sharma',
+    relation: 'Self',
   },
   {
     id: 'CARE-741029',
@@ -52,6 +59,8 @@ const INITIAL_TICKETS: CareTicket[] = [
     date: '12 Sep 2026',
     status: 'Resolved',
     resolutionTime: 'Resolved',
+    patientName: 'Rathi Vijay Sharma',
+    relation: 'Self',
   },
 ];
 
@@ -72,7 +81,7 @@ interface CareScreenProps {
   onOpenHome: () => void;
   onOpenVisits: () => void;
   onOpenReports: () => void;
-  onOpenPatientList?: () => void;
+  onOpenPatientList?: (tab?: 'Home' | 'Visits' | 'Reports' | 'Care' | 'IP') => void;
 }
 
 export const CareScreen: React.FC<CareScreenProps> = ({
@@ -89,6 +98,14 @@ export const CareScreen: React.FC<CareScreenProps> = ({
   const { isDark, colors } = useTheme();
 
   const scrollViewRef = React.useRef<any>(null);
+
+  // Active Patient Member State (Defaults to active Self account)
+  const [selectedMember, setSelectedMember] = useState<PatientMember>(getActiveMember());
+  const [showMemberSwitchSheet, setShowMemberSwitchSheet] = useState(false);
+
+  useEffect(() => {
+    setSelectedMember(getActiveMember());
+  }, [userSession]);
 
   // Form State
   const [ticketType, setTicketType] = useState<'Complaint' | 'Feedback' | ''>('');
@@ -362,6 +379,8 @@ export const CareScreen: React.FC<CareScreenProps> = ({
         date: 'Today',
         status: 'Registered',
         resolutionTime: 'Within 24 hours',
+        patientName: selectedMember.name,
+        relation: selectedMember.relation,
       };
 
       setTickets((prev) => [newTicket, ...prev]);
@@ -421,7 +440,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <AppIcon name="back" size={isTablet ? 24 : 20} color="#0083B0" />
+              <AppIcon name="back" size={isTablet ? 24 : 20} color={colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -435,24 +454,67 @@ export const CareScreen: React.FC<CareScreenProps> = ({
         </View>
 
         {/* MAIN SCROLLABLE CONTENT AREA */}
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.mainScrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            {
-              paddingHorizontal: isTablet ? 20 : 16,
-              paddingTop: isTablet ? 16 : 14,
-              paddingBottom: insets.bottom + 110,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
         >
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.mainScrollView}
+            contentContainerStyle={[
+              styles.scrollContent,
+              {
+                paddingHorizontal: isTablet ? 20 : 16,
+                paddingTop: isTablet ? 16 : 14,
+                paddingBottom: insets.bottom + 110,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+          {/* ACTIVE PATIENT MEMBER BANNER (SHOWING CURRENT USER NAME) */}
+          <View style={[styles.activeMemberCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.activeMemberLeft}>
+              <Image
+                source={getAvatarForMember(selectedMember)}
+                style={styles.activeMemberAvatar}
+                resizeMode="cover"
+              />
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Text style={[styles.activeMemberSubLabel, { color: colors.textSecondary }]}>
+                  RAISING COMPLAINT & FEEDBACK AS
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+                  <Text style={[styles.activeMemberNameText, { color: colors.textPrimary }]}>
+                    {selectedMember.name}
+                  </Text>
+                  <View style={[styles.relationPill, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight }]}>
+                    <Text style={[styles.relationPillText, { color: isDark ? colors.accent : colors.primary }]}>
+                      {selectedMember.relation}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.activeMemberMetaText, { color: colors.textSecondary }]}>
+                  Age: {selectedMember.age} • Gender: {selectedMember.sex === 'F' ? 'Female' : 'Male'} • UHID: {selectedMember.patientNumber || 'UHID-2026-8801'}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.switchMemberBtn, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight }]}
+              onPress={() => setShowMemberSwitchSheet(true)}
+              activeOpacity={0.8}
+            >
+              <AppIcon name="users" size={13} color={isDark ? colors.accent : colors.primary} />
+              <Text style={[styles.switchMemberBtnText, { color: isDark ? colors.accent : colors.primary }]}>Switch ▾</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* HELPDESK EMERGENCY CALL BANNER */}
-          <View style={[styles.helpBannerCard, { backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF', borderColor: '#BAE6FD' }]}>
+          <View style={[styles.helpBannerCard, { backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight, borderColor: colors.primaryLight }]}>
             <View style={styles.helpBannerHeaderRow}>
               <View style={styles.helpBannerIconWrap}>
-                <AppIcon name="care" size={22} color="#0083B0" />
+                <AppIcon name="care" size={22} color={colors.primary} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.helpBannerTitle, { color: colors.textPrimary }]}>
@@ -506,8 +568,8 @@ export const CareScreen: React.FC<CareScreenProps> = ({
               >
                 {(
                   [
-                    { id: 'Complaint', label: 'Complaint', activeColor: '#0083B0' },
-                    { id: 'Feedback', label: 'Feedback', activeColor: '#0083B0' },
+                    { id: 'Complaint', label: 'Complaint', activeColor: colors.primary },
+                    { id: 'Feedback', label: 'Feedback', activeColor: colors.primary },
                   ] as const
                 ).map((item) => {
                   const isSelected = ticketType === item.id;
@@ -529,7 +591,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
                       <Text
                         style={[
                           styles.typePillText,
-                          isSelected ? styles.typePillTextActive : { color: colors.textSecondary },
+                          isSelected ? { color: '#FFFFFF' } : { color: colors.textSecondary },
                         ]}
                       >
                         {item.label}
@@ -546,53 +608,45 @@ export const CareScreen: React.FC<CareScreenProps> = ({
               ) : null}
             </View>
 
-            {/* 2. DEPARTMENT CHIP SELECTOR */}
+            {/* 2. DEPARTMENT SELECTION */}
             <View style={styles.formGroup}>
               <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>
-                Concerned Department <Text style={styles.requiredStar}>*</Text>
+                Select Department <Text style={styles.requiredStar}>*</Text>
               </Text>
-              <View
-                style={
-                  errors.selectedDept
-                    ? { borderWidth: 1.5, borderColor: '#EF4444', borderRadius: 14, padding: 6, backgroundColor: '#FEF2F2' }
-                    : undefined
-                }
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.deptChipScroll}
               >
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.deptChipScroll}
-                >
-                  {DEPARTMENTS.map((deptItem) => {
-                    const isSelected = selectedDept === deptItem;
-                    return (
-                      <TouchableOpacity
-                        key={deptItem}
+                {DEPARTMENTS.map((deptName: string) => {
+                  const isSelected = selectedDept === deptName;
+                  return (
+                    <TouchableOpacity
+                      key={deptName}
+                      style={[
+                        styles.deptChip,
+                        isSelected
+                          ? [styles.deptChipActive, { backgroundColor: colors.primary, borderColor: colors.primary }]
+                          : { backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9', borderColor: colors.border },
+                      ]}
+                      onPress={() => {
+                        setSelectedDept(deptName);
+                        clearError('selectedDept');
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Text
                         style={[
-                          styles.deptChip,
-                          isSelected
-                            ? styles.deptChipActive
-                            : { backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9', borderColor: colors.border },
+                          styles.deptChipText,
+                          isSelected ? styles.deptChipTextActive : { color: colors.textSecondary },
                         ]}
-                        onPress={() => {
-                          setSelectedDept(deptItem);
-                          clearError('selectedDept');
-                        }}
-                        activeOpacity={0.8}
                       >
-                        <Text
-                          style={[
-                            styles.deptChipText,
-                            isSelected ? styles.deptChipTextActive : { color: colors.textSecondary },
-                          ]}
-                        >
-                          {deptItem}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
+                        {deptName}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
               {errors.selectedDept ? (
                 <View style={styles.errorInlineRow}>
                   <AppIcon name="alert-circle" size={13} color="#EF4444" />
@@ -611,7 +665,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
                       errors.customDept ? { borderWidth: 1.8 } : undefined,
                     ]}
                   >
-                    <AppIcon name="edit" size={18} color={errors.customDept ? '#EF4444' : '#0083B0'} />
+                    <AppIcon name="edit" size={18} color={errors.customDept ? '#EF4444' : colors.primary} />
                     <TextInput
                       style={[styles.textInput, { color: colors.textPrimary }]}
                       placeholder="Specify department name (e.g. ICU, Pediatrics, OPD Desk)"
@@ -646,7 +700,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
                   errors.subject ? { borderWidth: 1.8 } : undefined,
                 ]}
               >
-                <AppIcon name="edit" size={18} color={errors.subject ? '#EF4444' : '#0083B0'} />
+                <AppIcon name="edit" size={18} color={errors.subject ? '#EF4444' : colors.primary} />
                 <TextInput
                   style={[styles.textInput, { color: colors.textPrimary }]}
                   placeholder={
@@ -683,7 +737,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
                   errors.description ? { borderWidth: 1.8 } : undefined,
                 ]}
               >
-                <AppIcon name="document" size={18} color={errors.description ? '#EF4444' : '#0083B0'} style={{ marginTop: 2 }} />
+                <AppIcon name="document" size={18} color={errors.description ? '#EF4444' : colors.primary} style={{ marginTop: 2 }} />
                 <TextInput
                   style={[styles.textInputMultiline, { color: colors.textPrimary }]}
                   placeholder="Please describe your complaint or feedback in detail..."
@@ -718,10 +772,10 @@ export const CareScreen: React.FC<CareScreenProps> = ({
                   { borderColor: errors.contactNo ? '#EF4444' : colors.border },
                 ]}
               >
-                <View style={styles.countryPrefixBadge}>
-                  <Text style={styles.countryPrefixText}>+91</Text>
+                <View style={[styles.countryPrefixBadge, { backgroundColor: colors.primaryLight }]}>
+                  <Text style={[styles.countryPrefixText, { color: colors.primary }]}>+91</Text>
                 </View>
-                <AppIcon name="phone" size={18} color="#0083B0" />
+                <AppIcon name="phone" size={18} color={colors.primary} />
                 <TextInput
                   style={[styles.textInput, { color: colors.textPrimary }]}
                   placeholder="Enter 10-digit mobile number"
@@ -753,7 +807,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
                 onPress={() => setShowAttachModal(true)}
                 activeOpacity={0.8}
               >
-                <AppIcon name="document" size={16} color="#0083B0" />
+                <AppIcon name="document" size={16} color={colors.primary} />
                 <Text style={styles.attachFileBtnText}>
                   {attachedFile ? attachedFile : 'Attach File or Photo (Max 5MB)'}
                 </Text>
@@ -772,7 +826,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
             <TouchableOpacity
               style={[
                 styles.submitCareBtn,
-                { backgroundColor: '#0083B0' },
+                { backgroundColor: colors.primary },
               ]}
               onPress={handleSubmitCareForm}
               activeOpacity={0.88}
@@ -801,14 +855,14 @@ export const CareScreen: React.FC<CareScreenProps> = ({
                   style={[
                     styles.ticketTypeBadge,
                     t.type === 'Complaint' && { backgroundColor: '#FEF2F2' },
-                    t.type === 'Feedback' && { backgroundColor: '#DEF0FD' },
+                    t.type === 'Feedback' && { backgroundColor: colors.primaryLight },
                   ]}
                 >
                   <Text
                     style={[
                       styles.ticketTypeBadgeText,
                       t.type === 'Complaint' && { color: '#EF4444' },
-                      t.type === 'Feedback' && { color: '#0083B0' },
+                      t.type === 'Feedback' && { color: colors.primary },
                     ]}
                   >
                     {t.type}
@@ -823,6 +877,13 @@ export const CareScreen: React.FC<CareScreenProps> = ({
               <Text style={[styles.ticketSubject, { color: colors.textPrimary }]}>{t.subject}</Text>
               <Text style={[styles.ticketDesc, { color: colors.textSecondary }]}>{t.description}</Text>
 
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 4 }}>
+                <AppIcon name="user" size={12} color={isDark ? colors.accent : colors.primary} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary }}>
+                  Raised by: <Text style={{ fontWeight: '700', color: colors.textPrimary }}>{t.patientName || 'Rathi Vijay Sharma'}</Text> <Text style={{ color: isDark ? colors.accent : colors.primary, fontWeight: '700' }}>({t.relation || 'Self'})</Text>
+                </Text>
+              </View>
+
               <View style={[styles.ticketBottomRow, { borderTopColor: colors.border }]}>
                 <Text style={[styles.ticketDeptText, { color: colors.textMuted }]}>
                   Dept: {t.department} · {t.date}
@@ -832,7 +893,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
                     styles.ticketStatusPill,
                     t.status === 'In Progress' && { backgroundColor: '#FEF3C7' },
                     t.status === 'Resolved' && { backgroundColor: '#DCFCE7' },
-                    t.status === 'Registered' && { backgroundColor: '#E0F2FE' },
+                    t.status === 'Registered' && { backgroundColor: colors.primaryLight },
                   ]}
                 >
                   <Text
@@ -840,7 +901,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
                       styles.ticketStatusText,
                       t.status === 'In Progress' && { color: '#D97706' },
                       t.status === 'Resolved' && { color: '#16A34A' },
-                      t.status === 'Registered' && { color: '#0284C7' },
+                      t.status === 'Registered' && { color: colors.primary },
                     ]}
                   >
                     {t.status}
@@ -850,6 +911,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
             </View>
           ))}
         </ScrollView>
+        </KeyboardAvoidingView>
 
         {/* FLOATING CURVY BOTTOM NAVIGATION BAR WITH CARE ACTIVE */}
         <View
@@ -874,7 +936,21 @@ export const CareScreen: React.FC<CareScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 2: Visits */}
+          {/* Tab 2: IP (In-Patients) */}
+          <TouchableOpacity
+            style={styles.navTab}
+            onPress={() => {
+              if (onOpenPatientList) onOpenPatientList('IP');
+            }}
+            activeOpacity={0.8}
+          >
+            <AppIcon name="bed-pulse" size={isTablet ? 24 : 20} color={colors.textMuted} />
+            <Text style={[styles.navLabel, { color: colors.textMuted }, isTablet && { fontSize: 12.5 }]}>
+              IP
+            </Text>
+          </TouchableOpacity>
+
+          {/* Tab 3: Visits */}
           <TouchableOpacity
             style={styles.navTab}
             onPress={onOpenVisits}
@@ -886,7 +962,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 3: Reports */}
+          {/* Tab 4: Reports */}
           <TouchableOpacity
             style={styles.navTab}
             onPress={onOpenReports}
@@ -898,14 +974,14 @@ export const CareScreen: React.FC<CareScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 4: Care (ACTIVE HIGHLIGHT) */}
+          {/* Tab 5: Care (ACTIVE HIGHLIGHT) */}
           <TouchableOpacity
             style={styles.navTab}
             onPress={() => {}}
             activeOpacity={0.8}
           >
-            <AppIcon name="care" size={isTablet ? 24 : 20} color="#0083B0" />
-            <Text style={[styles.navLabel, { color: '#0083B0' }, styles.navLabelActive, isTablet && { fontSize: 12.5 }]}>
+            <AppIcon name="care" size={isTablet ? 24 : 20} color={colors.primary} />
+            <Text style={[styles.navLabel, { color: colors.primary }, styles.navLabelActive, isTablet && { fontSize: 12.5 }]}>
               Care
             </Text>
           </TouchableOpacity>
@@ -936,7 +1012,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
                   }}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.waCircleBg, { backgroundColor: '#0083B0' }]}>
+                  <View style={[styles.waCircleBg, { backgroundColor: colors.primary }]}>
                     <AppIcon name="document" size={24} color="#FFFFFF" />
                   </View>
                   <Text style={[styles.waCircleLabel, { color: colors.textPrimary }]}>Document</Text>
@@ -1012,7 +1088,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
               </Text>
 
               <View style={styles.modalInfoBox}>
-                <AppIcon name="clock" size={15} color="#0083B0" />
+                <AppIcon name="clock" size={15} color={colors.primary} />
                 <Text style={styles.modalInfoText}>
                   Expected Resolution: {submittedTicket?.resolutionTime}
                 </Text>
@@ -1025,6 +1101,80 @@ export const CareScreen: React.FC<CareScreenProps> = ({
               >
                 <Text style={styles.modalCloseBtnText}>Done</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* MEMBER SWITCH BOTTOM SHEET MODAL */}
+        <Modal
+          visible={showMemberSwitchSheet}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowMemberSwitchSheet(false)}
+        >
+          <View style={styles.sheetBottomOverlay}>
+            <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowMemberSwitchSheet(false)} />
+            <View style={[styles.switchMemberSheetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.sheetHandleBar} />
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <View>
+                  <Text style={[styles.switchSheetTitle, { color: colors.textPrimary }]}>Select Patient Profile</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>Raise complaint or feedback for family member</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setShowMemberSwitchSheet(false)}
+                  style={[styles.sheetCloseBtn, { backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9' }]}
+                >
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textSecondary }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                {INITIAL_PATIENTS.map((member) => {
+                  const isSelected = selectedMember.id === member.id;
+                  return (
+                    <TouchableOpacity
+                      key={member.id}
+                      style={[
+                        styles.sheetMemberItemCard,
+                        { borderColor: isSelected ? colors.primary : colors.border },
+                        isSelected && { backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF' },
+                      ]}
+                      onPress={() => {
+                        setSelectedMember(member);
+                        setShowMemberSwitchSheet(false);
+                      }}
+                      activeOpacity={0.75}
+                    >
+                      <Image
+                        source={getAvatarForMember(member)}
+                        style={styles.sheetMemberAvatarImg}
+                        resizeMode="cover"
+                      />
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={[styles.sheetMemberNameText, { color: colors.textPrimary }]}>
+                            {member.name}
+                          </Text>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? colors.accent : colors.primary }}>
+                            ({member.relation})
+                          </Text>
+                        </View>
+                        <Text style={[styles.sheetMemberSubText, { color: colors.textSecondary }]}>
+                          Age: {member.age} • Gender: {member.sex === 'F' ? 'Female' : 'Male'} • UHID: {member.patientNumber}
+                        </Text>
+                      </View>
+
+                      {isSelected ? (
+                        <View style={styles.sheetSelectedCheckCircle}>
+                          <AppIcon name="check" size={12} color="#FFFFFF" />
+                        </View>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -1654,6 +1804,125 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+
+  // ACTIVE MEMBER CARD & SWITCH MODAL STYLES
+  activeMemberCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  activeMemberLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  activeMemberAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#0083B0',
+  },
+  activeMemberSubLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  activeMemberNameText: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  relationPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  relationPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  activeMemberMetaText: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  switchMemberBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  switchMemberBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  switchMemberSheetCard: {
+    width: '100%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    borderTopWidth: 1.5,
+  },
+  sheetHandleBar: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  switchSheetTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  sheetCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetMemberItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  sheetMemberAvatarImg: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  sheetMemberNameText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  sheetMemberSubText: {
+    fontSize: 11.5,
+    marginTop: 2,
+  },
+  sheetSelectedCheckCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#0083B0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
 });
 

@@ -15,14 +15,19 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
-import { UserSession } from './types';
+import { UserSession, PatientMember } from './types';
 import UniversalLoader from './UniversalLoader';
 import { useTheme } from './ThemeContext';
 import IMAGES from './imageAssets';
+import { INITIAL_PATIENTS } from './mockData';
+import { getActiveMember, getAvatarForMember } from './accountManager';
+import ProfileSettingsDrawer from './ProfileSettingsDrawer';
+import NotificationsModal from './NotificationsModal';
 
 interface DashboardScreenProps {
   userSession: UserSession;
-  onOpenPatientList: (tab?: 'Home' | 'Visits' | 'Reports' | 'Care', autoAddMember?: boolean) => void;
+  onSwitchAccount?: (memberId: string) => void;
+  onOpenPatientList: (tab?: 'Home' | 'Visits' | 'Reports' | 'Care' | 'IP', autoAddMember?: boolean) => void;
   onOpenAddMember?: () => void;
   onOpenBookVisit?: () => void;
   onOpenBookTest?: () => void;
@@ -30,6 +35,10 @@ interface DashboardScreenProps {
   onOpenVisits?: () => void;
   onOpenReports?: () => void;
   onOpenCare?: () => void;
+  onOpenMedicines?: () => void;
+  onOpenNotifications?: () => void;
+  onOpenAnnouncements?: (bannerId?: string) => void;
+  onEditMember?: (member: PatientMember) => void;
   onLogout: () => void;
   onChangePin?: () => void;
 }
@@ -56,6 +65,7 @@ const getUserAvatarSource = (name?: string, customUri?: string, customAvatar?: a
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   userSession,
+  onSwitchAccount,
   onOpenPatientList,
   onOpenAddMember,
   onOpenBookVisit,
@@ -64,19 +74,27 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onOpenVisits,
   onOpenReports,
   onOpenCare,
+  onOpenMedicines,
+  onOpenNotifications,
+  onOpenAnnouncements,
+  onEditMember,
   onLogout,
   onChangePin,
 }) => {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 600 || height >= 950;
-  const { theme, setTheme, isDark, colors } = useTheme();
+  const { theme, setTheme, colorOptionId, setColorOptionId, colorOptions, isDark, colors } = useTheme();
 
   // Slide Bar & Settings State
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState<'Home' | 'Visits' | 'Reports' | 'Care'>('Home');
   const [accessibilityMode, setAccessibilityMode] = useState(false);
   const slideAnim = useRef(new Animated.Value(520)).current;
+
+  const activeMember = getActiveMember();
 
   // Universal Loader state
   const [loaderState, setLoaderState] = useState<{
@@ -89,72 +107,61 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const carouselRef = useRef<any>(null);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
+  // Services & Care Horizontal Scroll Indicator Animation & Dimensions
+  const servicesScrollAnim = useRef(new Animated.Value(0)).current;
+  const [servicesContainerWidth, setServicesContainerWidth] = useState<number>(width - 40);
+  const [servicesContentWidth, setServicesContentWidth] = useState<number>(480);
+
+  const maxServicesScrollX = Math.max(1, servicesContentWidth - servicesContainerWidth);
+
+  const servicesThumbTranslateX = servicesScrollAnim.interpolate({
+    inputRange: [0, maxServicesScrollX],
+    outputRange: [0, 16],
+    extrapolate: 'clamp',
+  });
+
   const PROMO_BANNERS = [
     {
       id: 'womens_wellness',
       title: "Women's Wellness Clinic",
       subtitle: 'Care Designed Around You • Gynecology, Maternity & Screening',
       image: IMAGES.bannerWomensWellness,
-      onPress: () =>
-        Alert.alert(
-          "Women's Wellness Clinic",
-          'Book appointment with specialized Gynecologists & Maternity Care specialists at GMCH Hospital.'
-        ),
+      onPress: () => onOpenAnnouncements?.('womens_wellness'),
     },
     {
       id: 'heart_campaign',
       title: 'Heart Health Campaign',
       subtitle: 'Listen to Your Heart Before It Whispers • Special Screening Package',
       image: IMAGES.bannerHeartCampaign,
-      onPress: () =>
-        Alert.alert(
-          'Heart Health Campaign',
-          'Special Heart Screening Package activated! Includes ECG, Lipid Profile, BP & Cardiac Consultation.'
-        ),
+      onPress: () => onOpenAnnouncements?.('heart_campaign'),
     },
     {
       id: 'surgical_care',
       title: 'Advanced Surgical & Recovery Care',
       subtitle: 'Expertise Across Every Step • Precision Surgery & Personalized Rehab',
       image: IMAGES.bannerSurgicalCare,
-      onPress: () =>
-        Alert.alert(
-          'Advanced Surgical Unit',
-          'Consult top surgical specialists & personalized recovery rehabilitation doctors at GMCH Hospital.'
-        ),
+      onPress: () => onOpenAnnouncements?.('surgical_care'),
     },
     {
       id: 'trauma_emergency',
       title: '24/7 Emergency & Trauma Care',
       subtitle: 'Ready When Every Second Counts • Rapid Response & Life Support',
       image: IMAGES.bannerTraumaEmergency,
-      onPress: () =>
-        Alert.alert(
-          '24/7 Emergency Services',
-          'Connecting to Hospital Emergency Trauma Desk & Ambulance Helpline (1800-209-4455 / 108).'
-        ),
+      onPress: () => onOpenAnnouncements?.('trauma_emergency'),
     },
     {
       id: 'community_camp',
       title: 'Community Health Camp',
       subtitle: 'Care That Reaches Everyone • Free Consultation & Health Screening',
       image: IMAGES.bannerCommunityCamp,
-      onPress: () =>
-        Alert.alert(
-          'Community Health Camp',
-          'Free health camp registration successful! Open for all age groups at GMCH Community Grounds this Saturday.'
-        ),
+      onPress: () => onOpenAnnouncements?.('community_camp'),
     },
     {
       id: 'blood_donation',
       title: 'Mega Blood Donation Camp',
       subtitle: 'Donate Blood, Save Lives • Free Health Checkup Included',
       image: IMAGES.bannerBloodDonation,
-      onPress: () =>
-        Alert.alert(
-          'Blood Donation Drive',
-          'Thank you for expressing interest in donating blood! Our medical team will contact you for the drive at GMCH Auditorium.'
-        ),
+      onPress: () => onOpenAnnouncements?.('blood_donation'),
     },
   ];
 
@@ -286,7 +293,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <Text style={[styles.headerGreetingTime, { color: colors.textSecondary }]}>
               {getGreeting()} 👋
             </Text>
-            <Text style={[styles.headerGreetingName, { color: '#0083B0' }, isTablet && { fontSize: 20 }]} numberOfLines={1}>
+            <Text style={[styles.headerGreetingName, { color: colors.primary }, isTablet && { fontSize: 20 }]} numberOfLines={1}>
               {displayName}
             </Text>
           </View>
@@ -300,11 +307,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 isDark && { backgroundColor: colors.borderLight },
                 isTablet && { width: 44, height: 44, borderRadius: 22 },
               ]}
-              onPress={() => Alert.alert('Notifications', 'You have 5 recent notifications from hospital staff.')}
+              onPress={() => {
+                if (onOpenNotifications) onOpenNotifications();
+                else setShowNotificationsModal(true);
+              }}
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <AppIcon name="bell" size={isTablet ? 24 : 21} color="#0083B0" />
+              <AppIcon name="bell" size={isTablet ? 24 : 21} color={colors.primary} />
               <View style={[styles.bellBadgeDot, isTablet && { top: 7, right: 8, width: 9, height: 9 }]} />
             </TouchableOpacity>
 
@@ -312,14 +322,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <TouchableOpacity
               style={[
                 styles.profileIconBtn,
-                isDark && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
+                isDark ? { backgroundColor: colors.primaryLight, borderColor: colors.primary } : { backgroundColor: colors.primaryLight, borderColor: colors.primaryLight },
                 isTablet && { width: 44, height: 44, borderRadius: 22 },
               ]}
               onPress={openSlideBar}
               activeOpacity={0.8}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <AppIcon name="user" size={isTablet ? 27 : 24} color="#0083B0" />
+              <AppIcon name="user" size={isTablet ? 27 : 24} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -361,6 +371,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   {PROMO_BANNERS.map((banner) => (
                     <TouchableOpacity
                       key={banner.id}
+                      activeOpacity={0.88}
+                      onPress={() => onOpenAnnouncements?.(banner.id)}
                       style={[
                         styles.posterCard,
                         {
@@ -370,8 +382,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                           borderColor: colors.border,
                         },
                       ]}
-                      onPress={banner.onPress}
-                      activeOpacity={0.92}
                     >
                       <Image
                         source={banner.image}
@@ -418,11 +428,18 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </View>
 
             {/* Horizontal Scrollable Icons Row (Slim compact icons with 1-line text below) */}
-            <ScrollView
+            <Animated.ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.servicesScrollContent}
               style={styles.servicesScrollView}
+              scrollEventThrottle={16}
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { x: servicesScrollAnim } } }],
+                { useNativeDriver: false }
+              )}
+              onLayout={(e) => setServicesContainerWidth(e.nativeEvent.layout.width)}
+              onContentSizeChange={(contentWidth) => setServicesContentWidth(contentWidth)}
             >
               {/* Item 1: Book Appointment */}
               <TouchableOpacity
@@ -431,7 +448,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 activeOpacity={0.75}
               >
                 <View style={styles.serviceIconWrap}>
-                  <AppIcon name="calendar" size={isTablet ? 22 : 18} color="#0083B0" />
+                  <AppIcon name="calendar" size={isTablet ? 22 : 18} color={colors.primary} />
                 </View>
                 <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
                   Book Appointment
@@ -445,7 +462,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 activeOpacity={0.75}
               >
                 <View style={styles.serviceIconWrap}>
-                  <AppIcon name="wallet-outline" size={isTablet ? 22 : 18} color="#0083B0" />
+                  <AppIcon name="wallet-outline" size={isTablet ? 22 : 18} color={colors.primary} />
                 </View>
                 <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
                   Pay Bills
@@ -459,7 +476,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 activeOpacity={0.75}
               >
                 <View style={styles.serviceIconWrap}>
-                  <AppIcon name="flask" size={isTablet ? 22 : 18} color="#0083B0" />
+                  <AppIcon name="flask" size={isTablet ? 22 : 18} color={colors.primary} />
                 </View>
                 <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
                   Book Test
@@ -469,32 +486,20 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {/* Item 4: Medicines */}
               <TouchableOpacity
                 style={styles.serviceItem}
-                onPress={() => Alert.alert('Medicines', 'Order prescribed medicines or view active pharmacy orders.')}
+                onPress={() => {
+                  if (onOpenMedicines) onOpenMedicines();
+                }}
                 activeOpacity={0.75}
               >
                 <View style={styles.serviceIconWrap}>
-                  <AppIcon name="pill" size={isTablet ? 22 : 18} color="#0083B0" />
+                  <AppIcon name="pill" size={isTablet ? 22 : 18} color={colors.primary} />
                 </View>
                 <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
                   Medicines
                 </Text>
               </TouchableOpacity>
 
-              {/* Item 5: Diet Plan */}
-              <TouchableOpacity
-                style={styles.serviceItem}
-                onPress={() => Alert.alert('Diet Plan', 'Viewing personalized nutritionist diet instructions.')}
-                activeOpacity={0.75}
-              >
-                <View style={styles.serviceIconWrap}>
-                  <AppIcon name="food-apple-outline" size={isTablet ? 22 : 18} color="#0083B0" />
-                </View>
-                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
-                  Diet Plan
-                </Text>
-              </TouchableOpacity>
-
-              {/* Item 6: Add Member */}
+              {/* Item 5: Add Member */}
               <TouchableOpacity
                 style={styles.serviceItem}
                 onPress={() => {
@@ -504,43 +509,40 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 activeOpacity={0.75}
               >
                 <View style={styles.serviceIconWrap}>
-                  <AppIcon name="usergroup-add" size={isTablet ? 22 : 18} color="#0083B0" />
+                  <AppIcon name="usergroup-add" size={isTablet ? 22 : 18} color={colors.primary} />
                 </View>
                 <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
                   Add Member
                 </Text>
               </TouchableOpacity>
-            </ScrollView>
+            </Animated.ScrollView>
 
             {/* Scroll Indicator Track Pill at bottom of Card */}
             <View style={styles.scrollTrackContainer}>
-              <View style={styles.scrollTrackBg}>
-                <View style={[styles.scrollTrackThumb, { backgroundColor: isDark ? colors.borderLight : '#64748B' }]} />
+              <View style={[styles.scrollTrackBg, { backgroundColor: isDark ? colors.border : '#CBD5E1' }]}>
+                <Animated.View
+                  style={[
+                    styles.scrollTrackThumb,
+                    {
+                      backgroundColor: isDark ? colors.primary : '#334155',
+                      transform: [{ translateX: servicesThumbTranslateX }],
+                    },
+                  ]}
+                />
               </View>
             </View>
           </View>
 
           {/* 2B. EXCLUSIVE HEALTH POINTS & REWARDS BANNER (BRIGHT SOFT CYAN CARD) */}
-          <TouchableOpacity
+          <View
             style={[
               styles.rewardsPillBanner,
               {
-                backgroundColor: isDark ? '#1E293B' : '#D0EDFF',
-                borderColor: isDark ? '#38BDF8' : '#0083B0',
+                backgroundColor: isDark ? '#1E293B' : colors.primaryLight,
+                borderColor: isDark ? colors.accent : colors.primary,
               },
               isTablet && { paddingHorizontal: 20, paddingVertical: 16, marginBottom: 18 },
             ]}
-            onPress={() =>
-              Alert.alert(
-                `You Have ${userSession.healthPoints ?? 450} Health Points 🎉`,
-                `You currently have ${userSession.healthPoints ?? 450} Health Points (₹${userSession.healthPoints ?? 450} value) in your GMCH Patient Account!\n\nBook your next visit now to redeem your points and get up to ₹${userSession.healthPoints ?? 450} instant discount applied at checkout.`,
-                [
-                  { text: 'Book Next Visit', onPress: onOpenBookVisit },
-                  { text: 'Close', style: 'cancel' },
-                ]
-              )
-            }
-            activeOpacity={0.88}
           >
             <Image
               source={IMAGES.giftBoxRewards}
@@ -549,17 +551,15 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               resizeMode="contain"
             />
             <View style={styles.rewardsTextContainer}>
-              <Text style={[styles.rewardsTitle, { color: isDark ? '#F1F5F9' : '#004F6E' }, isTablet && { fontSize: 17 }]}>
+              <Text style={[styles.rewardsTitle, { color: isDark ? '#F1F5F9' : colors.primary }, isTablet && { fontSize: 17 }]}>
                 You Have {userSession.healthPoints ?? 450} Health Points! 🎁
               </Text>
-              <Text style={[styles.rewardsSubtitle, { color: isDark ? '#7DD3FC' : '#006B94' }, isTablet && { fontSize: 13 }]} numberOfLines={1}>
+              <Text style={[styles.rewardsSubtitle, { color: isDark ? colors.accent : colors.primary }, isTablet && { fontSize: 13 }]} numberOfLines={1}>
                 Book your next visit & get discount offer!
               </Text>
             </View>
-            <View style={styles.rewardsChevronWrap}>
-              <AppIcon name="chevron-right" size={20} color={isDark ? '#7DD3FC' : '#0083B0'} />
-            </View>
-          </TouchableOpacity>
+         
+          </View>
 
           {/* 3. OUTSTANDING BILLS CARD */}
           <View
@@ -608,14 +608,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 Family Members
               </Text>
               <Text style={[styles.familyCardSub, { color: colors.textSecondary }, isTablet && { fontSize: 13.5 }]}>
-                4 Members
+                5 Members (4 OP • 1 IP)
               </Text>
             </View>
 
-            {/* Overlapping Avatars for 4 Members: Rathi (Self), Kavita (Wife), Aarav (Son), Deepak (Brother) */}
+            {/* Overlapping Avatars for 5 Members: Rathi (Self), Kavita (Wife), Aarav (Son), Deepak (Brother), Chandan (Father IP) */}
             <View style={styles.avatarsGroupRow}>
-              {/* Member 1: Main Owner - Rathi Vijay Sharma */}
-              <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: '#DEF0FD', zIndex: 4, marginRight: -10 }]}>
+              {/* Member 1: Main Owner - Rathi Vijay Sharma (OP) */}
+              <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: colors.primaryLight, zIndex: 5, marginRight: -10 }]}>
                 <Image
                   source={IMAGES.avatarMale}
                   fadeDuration={0}
@@ -624,8 +624,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 />
               </View>
 
-              {/* Member 2: Wife - Kavita Chouhan */}
-              <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: '#FDE1E7', zIndex: 3, marginRight: -10 }]}>
+              {/* Member 2: Wife - Kavita Chouhan (OP) */}
+              <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: '#FDE1E7', zIndex: 4, marginRight: -10 }]}>
                 <Image
                   source={IMAGES.avatarKavita}
                   fadeDuration={0}
@@ -634,8 +634,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 />
               </View>
 
-              {/* Member 3: Son - Aarav Chouhan */}
-              <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: '#DEF0FD', zIndex: 2, marginRight: -10 }]}>
+              {/* Member 3: Son - Aarav Chouhan (OP) */}
+              <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: colors.primaryLight, zIndex: 3, marginRight: -10 }]}>
                 <Image
                   source={IMAGES.avatarAarav}
                   fadeDuration={0}
@@ -644,10 +644,20 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 />
               </View>
 
-              {/* Member 4: Brother - Deepak Chouhan */}
-              <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: '#DEF0FD', zIndex: 1 }]}>
+              {/* Member 4: Brother - Deepak Chouhan (OP) */}
+              <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: colors.primaryLight, zIndex: 2, marginRight: -10 }]}>
                 <Image
                   source={IMAGES.avatarDeepak}
+                  fadeDuration={0}
+                  style={styles.stackedAvatarImg}
+                  resizeMode="cover"
+                />
+              </View>
+
+              {/* Member 5: Father - Chandan Chouhan (IP) */}
+              <View style={[styles.stackedAvatarCircle, { borderColor: colors.surface, backgroundColor: colors.primaryLight, zIndex: 1 }]}>
+                <Image
+                  source={IMAGES.avatarMale}
                   fadeDuration={0}
                   style={styles.stackedAvatarImg}
                   resizeMode="cover"
@@ -694,8 +704,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   Dr. Chakravarthi PIS
                 </Text>
                 <View style={styles.compactSpecRow}>
-                  <View style={[styles.compactSpecPill, isDark && { backgroundColor: colors.primaryLight }]}>
-                    <Text style={[styles.compactSpecText, isDark && { color: '#38BDF8' }]}>Cardiology</Text>
+                  <View style={[styles.compactSpecPill, { backgroundColor: colors.primaryLight }]}>
+                    <Text style={[styles.compactSpecText, { color: colors.primary }]}>Cardiology</Text>
                   </View>
                   <Text style={[styles.compactQualText, { color: colors.textSecondary }]}>• MBBS, MD</Text>
                 </View>
@@ -711,27 +721,27 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               style={[
                 styles.compactMetaStrip,
                 {
-                  backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF',
-                  borderColor: isDark ? colors.border : '#E0F2FE',
+                  backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight,
+                  borderColor: isDark ? colors.border : colors.primaryLight,
                 },
               ]}
             >
               <View style={styles.compactMetaItem}>
-                <AppIcon name="calendar" size={12.5} color="#0083B0" />
+                <AppIcon name="calendar" size={12.5} color={colors.primary} />
                 <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>13 Jun, 2026</Text>
               </View>
 
               <View style={[styles.compactMetaDivider, { backgroundColor: colors.divider }] } />
 
               <View style={styles.compactMetaItem}>
-                <AppIcon name="clock" size={12.5} color="#0083B0" />
+                <AppIcon name="clock" size={12.5} color={colors.primary} />
                 <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>05:00 PM</Text>
               </View>
 
               <View style={[styles.compactMetaDivider, { backgroundColor: colors.divider }]} />
 
               <View style={styles.compactMetaItem}>
-                <AppIcon name="user" size={12.5} color="#0083B0" />
+                <AppIcon name="user" size={12.5} color={colors.primary} />
                 <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>Vijay H Sharma</Text>
               </View>
             </View>
@@ -763,8 +773,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   Dr. Ananya Roy
                 </Text>
                 <View style={styles.compactSpecRow}>
-                  <View style={[styles.compactSpecPill, isDark && { backgroundColor: colors.primaryLight }]}>
-                    <Text style={[styles.compactSpecText, isDark && { color: '#38BDF8' }]}>Pediatrics</Text>
+                  <View style={[styles.compactSpecPill, { backgroundColor: colors.primaryLight }]}>
+                    <Text style={[styles.compactSpecText, { color: colors.primary }]}>Pediatrics</Text>
                   </View>
                   <Text style={[styles.compactQualText, { color: colors.textSecondary }]}>• MBBS</Text>
                 </View>
@@ -780,27 +790,27 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               style={[
                 styles.compactMetaStrip,
                 {
-                  backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF',
-                  borderColor: isDark ? colors.border : '#E0F2FE',
+                  backgroundColor: isDark ? colors.surfaceVariant : colors.primaryLight,
+                  borderColor: isDark ? colors.border : colors.primaryLight,
                 },
               ]}
             >
               <View style={styles.compactMetaItem}>
-                <AppIcon name="calendar" size={12.5} color="#0083B0" />
+                <AppIcon name="calendar" size={12.5} color={colors.primary} />
                 <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>18 Jun, 2026</Text>
               </View>
 
               <View style={[styles.compactMetaDivider, { backgroundColor: colors.divider }]} />
 
               <View style={styles.compactMetaItem}>
-                <AppIcon name="clock" size={12.5} color="#0083B0" />
+                <AppIcon name="clock" size={12.5} color={colors.primary} />
                 <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>11:30 AM</Text>
               </View>
 
               <View style={[styles.compactMetaDivider, { backgroundColor: colors.divider }]} />
 
               <View style={styles.compactMetaItem}>
-                <AppIcon name="user" size={12.5} color="#0083B0" />
+                <AppIcon name="user" size={12.5} color={colors.primary} />
                 <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>Aarav Chouhan</Text>
               </View>
             </View>
@@ -827,12 +837,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <AppIcon
               name="home"
               size={isTablet ? 24 : 20}
-              color={activeTab === 'Home' ? '#0083B0' : colors.textMuted}
+              color={activeTab === 'Home' ? colors.primary : colors.textMuted}
             />
             <Text
               style={[
                 styles.navLabel,
-                { color: activeTab === 'Home' ? '#0083B0' : colors.textMuted },
+                { color: activeTab === 'Home' ? colors.primary : colors.textMuted },
                 activeTab === 'Home' && styles.navLabelActive,
                 isTablet && { fontSize: 12.5 },
               ]}
@@ -841,7 +851,35 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 2: Visits */}
+          {/* Tab 2: IP (In-Patients) */}
+          <TouchableOpacity
+            style={styles.navTab}
+            activeOpacity={0.7}
+            onPress={() => {
+              setActiveTab('IP' as any);
+              if (onOpenPatientList) {
+                onOpenPatientList('IP');
+              }
+            }}
+          >
+            <AppIcon
+              name="bed-pulse"
+              size={isTablet ? 24 : 20}
+              color={activeTab === ('IP' as any) ? colors.primary : colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.navLabel,
+                { color: activeTab === ('IP' as any) ? colors.primary : colors.textMuted },
+                activeTab === ('IP' as any) && styles.navLabelActive,
+                isTablet && { fontSize: 12.5 },
+              ]}
+            >
+              IP
+            </Text>
+          </TouchableOpacity>
+
+          {/* Tab 3: Visits */}
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.7}
@@ -857,12 +895,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <AppIcon
               name="calendar"
               size={isTablet ? 24 : 20}
-              color={activeTab === 'Visits' ? '#0083B0' : colors.textMuted}
+              color={activeTab === 'Visits' ? colors.primary : colors.textMuted}
             />
             <Text
               style={[
                 styles.navLabel,
-                { color: activeTab === 'Visits' ? '#0083B0' : colors.textMuted },
+                { color: activeTab === 'Visits' ? colors.primary : colors.textMuted },
                 activeTab === 'Visits' && styles.navLabelActive,
                 isTablet && { fontSize: 12.5 },
               ]}
@@ -871,7 +909,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 3: Reports */}
+          {/* Tab 4: Reports */}
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.7}
@@ -887,12 +925,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <AppIcon
               name="document"
               size={isTablet ? 24 : 20}
-              color={activeTab === 'Reports' ? '#0083B0' : colors.textMuted}
+              color={activeTab === 'Reports' ? colors.primary : colors.textMuted}
             />
             <Text
               style={[
                 styles.navLabel,
-                { color: activeTab === 'Reports' ? '#0083B0' : colors.textMuted },
+                { color: activeTab === 'Reports' ? colors.primary : colors.textMuted },
                 activeTab === 'Reports' && styles.navLabelActive,
                 isTablet && { fontSize: 12.5 },
               ]}
@@ -901,7 +939,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Tab 4: Care */}
+          {/* Tab 5: Care */}
           <TouchableOpacity
             style={styles.navTab}
             activeOpacity={0.7}
@@ -913,12 +951,12 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <AppIcon
               name="care"
               size={isTablet ? 24 : 20}
-              color={activeTab === 'Care' ? '#0083B0' : colors.textMuted}
+              color={activeTab === 'Care' ? colors.primary : colors.textMuted}
             />
             <Text
               style={[
                 styles.navLabel,
-                { color: activeTab === 'Care' ? '#0083B0' : colors.textMuted },
+                { color: activeTab === 'Care' ? colors.primary : colors.textMuted },
                 activeTab === 'Care' && styles.navLabelActive,
                 isTablet && { fontSize: 12.5 },
               ]}
@@ -929,315 +967,23 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         </View>
 
         {/* PROFILE SLIDE BAR MODAL */}
-        <Modal
+        {/* Standalone Profile & Settings Drawer */}
+        <ProfileSettingsDrawer
           visible={showProfileMenu}
-          transparent
-          animationType="none"
-          statusBarTranslucent
-          onRequestClose={closeSlideBar}
-        >
-          <View style={styles.slideBarOverlay}>
-            <TouchableOpacity
-              style={styles.slideBarBackdrop}
-              activeOpacity={1}
-              onPress={closeSlideBar}
-            />
+          onClose={closeSlideBar}
+          userSession={userSession}
+          onSwitchAccount={onSwitchAccount}
+          onLogout={handleLogoutConfirm}
+          onChangePin={onChangePin}
+          onOpenAnnouncements={onOpenAnnouncements ? () => onOpenAnnouncements() : undefined}
+          onEditMember={onEditMember}
+        />
 
-            <Animated.View
-              style={[
-                styles.slideBarPanel,
-                {
-                  backgroundColor: colors.surface,
-                  transform: [{ translateX: slideAnim }],
-                  width: isTablet ? 460 : '86%',
-                  paddingTop: Math.max(insets.top, 16),
-                  paddingBottom: Math.max(insets.bottom, 20),
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.slideBarHeader,
-                  {
-                    backgroundColor: colors.surface,
-                    borderBottomColor: colors.border,
-                  },
-                ]}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.slideBarTitle, { color: colors.textPrimary }]}>
-                    Profile & Settings
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.slideBarCloseBtn, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}
-                  onPress={closeSlideBar}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <AppIcon name="close" size={20} color={isDark ? '#94A3B8' : '#64748B'} />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.slideBarScrollContent}
-              >
-                {/* User Identity Banner with Profile Pic & Verified Badge */}
-                <View style={[styles.slideUserBanner, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
-                  <View style={[styles.slideAvatarWrapper, { backgroundColor: isDark ? colors.primaryLight : '#DEF0FD', overflow: 'hidden' }]}>
-                    <Image
-                      source={userAvatarSource}
-                      style={styles.slideAvatarImg}
-                      resizeMode="cover"
-                    />
-                  </View>
-                  <View style={{ flex: 1, marginLeft: 14 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={[styles.slideUserName, { color: colors.textPrimary }]}>{displayName}</Text>
-                      <View style={[styles.verifiedBadge, { backgroundColor: isDark ? colors.primaryLight : '#DEF0FD' }]}>
-                        <AppIcon name="check" size={11} color="#0083B0" />
-                      </View>
-                    </View>
-                    <Text style={styles.slideUserUhid}>UHID: 109282827</Text>
-                    <Text style={[styles.slideUserMobile, { color: colors.textSecondary }]}>
-                      +91 {userSession.mobileNumber || '9414023873'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* SECTION 1: HOSPITAL REGISTRATION (MRD) */}
-                <View style={styles.slideSectionContainer}>
-                  <View style={styles.slideSectionHeaderRow}>
-                 
-                  </View>
-                  <View style={[styles.mrdDetailsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <View style={styles.mrdRow}>
-                      <Text style={[styles.mrdLabel, { color: colors.textSecondary }]}>Full Name</Text>
-                      <Text style={[styles.mrdValue, { color: colors.textPrimary }]}>{displayName}</Text>
-                    </View>
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                    <View style={styles.mrdRow}>
-                      <Text style={[styles.mrdLabel, { color: colors.textSecondary }]}>Date of Birth</Text>
-                      <Text style={[styles.mrdValue, { color: colors.textPrimary }]}>1992-05-14</Text>
-                    </View>
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                    <View style={styles.mrdRow}>
-                      <Text style={[styles.mrdLabel, { color: colors.textSecondary }]}>Gender</Text>
-                      <Text style={[styles.mrdValue, { color: colors.textPrimary }]}>Male</Text>
-                    </View>
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                    <View style={styles.mrdRow}>
-                      <Text style={[styles.mrdLabel, { color: colors.textSecondary }]}>Primary Mobile</Text>
-                      <Text style={[styles.mrdValue, { color: colors.textPrimary }]}>{userSession.mobileNumber || '9414023873'}</Text>
-                    </View>
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                    <View style={styles.mrdRow}>
-                      <Text style={[styles.mrdLabel, { color: colors.textSecondary }]}>UHID</Text>
-                      <Text style={styles.mrdValueAccent}>109282827</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* SECTION 2: ACCOUNT */}
-                <View style={styles.slideSectionContainer}>
-                  <Text style={[styles.slideSectionHeader, { color: colors.textSecondary }]}>Account</Text>
-                  <View style={[styles.slideMenuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    {/* Digital Medical ID */}
-                  
-
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                    {/* My Family */}
-                    <TouchableOpacity
-                      style={styles.slideMenuItem}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        closeSlideBar();
-                        onOpenPatientList('Home', false);
-                      }}
-                    >
-                      <View style={[styles.slideMenuIconBg, { backgroundColor: isDark ? colors.primaryLight : '#DEF0FD' }]}>
-                        <AppIcon name="users" size={19} color="#0083B0" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.slideMenuItemTitle, { color: colors.textPrimary }]}>My Family</Text>
-                        <Text style={[styles.slideMenuItemSub, { color: colors.textSecondary }]}>4 member(s)</Text>
-                      </View>
-                      <AppIcon name="chevron-right" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                    {/* Request Profile Correction */}
-                    <TouchableOpacity
-                      style={styles.slideMenuItem}
-                      activeOpacity={0.7}
-                      onPress={() => Alert.alert('Profile Correction', 'Submit request to hospital registration desk to update name, DOB, gender or mobile number.')}
-                    >
-                      <View style={[styles.slideMenuIconBg, { backgroundColor: isDark ? colors.primaryLight : '#DEF0FD' }]}>
-                        <AppIcon name="edit" size={19} color="#0083B0" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.slideMenuItemTitle, { color: colors.textPrimary }]}>Edit Profile</Text>
-                        <Text style={[styles.slideMenuItemSub, { color: colors.textSecondary }]}>Name, DOB, gender or mobile number</Text>
-                      </View>
-                      <AppIcon name="chevron-right" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-
-                    <View style={styles.mrdDivider} />
-
-                  
-
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                    {/* Who Can Access My Records */}
-                    <TouchableOpacity
-                      style={styles.slideMenuItem}
-                      activeOpacity={0.7}
-                      onPress={() => Alert.alert('Access Permissions', '2 active grant(s) for family members & assigned doctors.')}
-                    >
-                      <View style={[styles.slideMenuIconBg, { backgroundColor: isDark ? colors.primaryLight : '#DEF0FD' }]}>
-                        <AppIcon name="shield-check" size={19} color="#0083B0" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.slideMenuItemTitle, { color: colors.textPrimary }]}>Who Can Access My Records</Text>
-                        <Text style={[styles.slideMenuItemSub, { color: colors.textSecondary }]}>2 active grant(s)</Text>
-                      </View>
-                      <AppIcon name="chevron-right" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                    {/* Announcements */}
-                    <TouchableOpacity
-                      style={styles.slideMenuItem}
-                      activeOpacity={0.7}
-                      onPress={() => Alert.alert('Announcements', 'No new hospital announcements today.')}
-                    >
-                      <View style={[styles.slideMenuIconBg, { backgroundColor: isDark ? colors.primaryLight : '#DEF0FD' }]}>
-                        <AppIcon name="bullhorn" size={19} color="#0083B0" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.slideMenuItemTitle, { color: colors.textPrimary }]}>Announcements</Text>
-                        <Text style={[styles.slideMenuItemSub, { color: colors.textSecondary }]}>Hospital notices & OPD timings</Text>
-                      </View>
-                      <AppIcon name="chevron-right" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                    {/* Medical Records */}
-                    <TouchableOpacity
-                      style={styles.slideMenuItem}
-                      activeOpacity={0.7}
-                      onPress={() => Alert.alert('Medical Records', 'Visit history, reports & prescriptions.')}
-                    >
-                      <View style={[styles.slideMenuIconBg, { backgroundColor: isDark ? colors.primaryLight : '#DEF0FD' }]}>
-                        <AppIcon name="hospital" size={19} color="#0083B0" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.slideMenuItemTitle, { color: colors.textPrimary }]}>Medical Records</Text>
-                        <Text style={[styles.slideMenuItemSub, { color: colors.textSecondary }]}>Visit history, reports & prescriptions</Text>
-                      </View>
-                      <AppIcon name="chevron-right" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                    {/* Security PIN */}
-                    <TouchableOpacity
-                      style={styles.slideMenuItem}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        if (onChangePin) {
-                          closeSlideBar();
-                          onChangePin();
-                        } else {
-                          Alert.alert('Security PIN', 'Updating 4-digit login PIN.');
-                        }
-                      }}
-                    >
-                      <View style={[styles.slideMenuIconBg, { backgroundColor: isDark ? colors.primaryLight : '#DEF0FD' }]}>
-                        <AppIcon name="key" size={19} color="#0083B0" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.slideMenuItemTitle, { color: colors.textPrimary }]}>Security PIN</Text>
-                        <Text style={[styles.slideMenuItemSub, { color: colors.textSecondary }]}>Change login PIN</Text>
-                      </View>
-                      <AppIcon name="chevron-right" size={16} color={colors.textMuted} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* SECTION 3: DISPLAY & ACCESSIBILITY */}
-                <View style={styles.slideSectionContainer}>
-                  <Text style={[styles.slideSectionHeader, { color: colors.textSecondary }]}>DISPLAY & ACCESSIBILITY</Text>
-                  <View style={[styles.slideMenuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    {/* Dark Mode: 2 Modes (Light & Dark) */}
-                    <View style={{ padding: 14 }}>
-                      <Text style={[styles.displayRowLabel, { color: colors.textPrimary }]}>Appearance Theme</Text>
-                      <View style={[styles.themeSegmentContainer, { backgroundColor: isDark ? '#162032' : '#F1F5F9' }]}>
-                        {(['Light', 'Dark'] as const).map((t) => (
-                          <TouchableOpacity
-                            key={t}
-                            style={[
-                              styles.themeSegmentBtn,
-                              theme === t && styles.themeSegmentBtnActive,
-                            ]}
-                            onPress={() => setTheme(t)}
-                            activeOpacity={0.8}
-                          >
-                            <Text
-                              style={[
-                                styles.themeSegmentText,
-                                theme === t && styles.themeSegmentTextActive,
-                              ]}
-                            >
-                              {t}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-
-                    <View style={[styles.mrdDivider, { backgroundColor: colors.divider }]} />
-
-                 
-                  </View>
-                </View>
-              </ScrollView>
-
-              {/* STICKY FIXED LOGOUT BUTTON AT THE BOTTOM */}
-              <View
-                style={[
-                  styles.slideStickyFooter,
-                  {
-                    backgroundColor: colors.surface,
-                    borderTopColor: colors.border,
-                    paddingBottom: Math.max(insets.bottom, 16),
-                  },
-                ]}
-              >
-                <TouchableOpacity
-                  style={[
-                    styles.slideLogoutBtn,
-                    isDark && { backgroundColor: '#3B1A1A', borderColor: '#7F1D1D' },
-                  ]}
-                  onPress={handleLogoutConfirm}
-                  activeOpacity={0.88}
-                >
-                  <AppIcon name="logout" size={18} color="#EF4444" />
-                  <Text style={styles.slideLogoutText}>Logout</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          </View>
-        </Modal>
+        {/* Notifications Modal */}
+        <NotificationsModal
+          visible={showNotificationsModal}
+          onClose={() => setShowNotificationsModal(false)}
+        />
 
         {/* Universal Loader */}
         <UniversalLoader
@@ -2184,6 +1930,51 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  colorOptionSubtext: {
+    fontSize: 11.5,
+    marginTop: 2,
+    marginBottom: 10,
+  },
+  colorSwatchesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  colorSwatchBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  colorSwatchBtnActive: {
+    borderColor: '#FFFFFF',
+    transform: [{ scale: 1.15 }],
+  },
+  selectedColorInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    alignSelf: 'center',
+  },
+  selectedColorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  colorSelectedName: {
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
   accessibilityDesc: {
     fontSize: 12,
     color: '#64748B',
@@ -2212,6 +2003,70 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     fontWeight: '700',
     color: '#DC2626',
+  },
+
+  // 🔄 ACCOUNT SWITCHER DROPDOWN STYLES
+  circleDropdownBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  heroAccountDropdownList: {
+    borderTopWidth: 1,
+    marginTop: 12,
+    paddingTop: 10,
+  },
+  accountDropdownSub: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  accountDropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginBottom: 6,
+  },
+  accountDropdownOptionActive: {
+    borderWidth: 1,
+  },
+  dropdownAvatarBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dropdownOptionName: {
+    fontSize: 13.5,
+    fontWeight: '600',
+  },
+  selfPill: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  dropdownOptionRelation: {
+    fontSize: 11.5,
+    marginTop: 1,
+  },
+  activeCheckCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchActionText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
 });
 

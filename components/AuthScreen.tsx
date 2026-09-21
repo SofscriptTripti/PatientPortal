@@ -23,6 +23,52 @@ import MobileEntryScreen from './MobileEntryScreen';
 import OtpScreen from './OtpScreen';
 import UniversalLoader from './UniversalLoader';
 import IMAGES from './imageAssets';
+import { useTheme } from './ThemeContext';
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+const GENERATED_YEARS = Array.from({ length: 97 }, (_, i) => 2026 - i);
+
+export interface CountryItem {
+  code: string;
+  name: string;
+  dialCode: string;
+  flag: string;
+}
+
+const COUNTRY_LIST: CountryItem[] = [
+  { code: 'IN', name: 'India', dialCode: '+91', flag: '🇮🇳' },
+  { code: 'US', name: 'United States', dialCode: '+1', flag: '🇺🇸' },
+  { code: 'GB', name: 'United Kingdom', dialCode: '+44', flag: '🇬🇧' },
+  { code: 'AE', name: 'United Arab Emirates', dialCode: '+971', flag: '🇦🇪' },
+  { code: 'CA', name: 'Canada', dialCode: '+1', flag: '🇨🇦' },
+  { code: 'AU', name: 'Australia', dialCode: '+61', flag: '🇦🇺' },
+  { code: 'SG', name: 'Singapore', dialCode: '+65', flag: '🇸🇬' },
+  { code: 'SA', name: 'Saudi Arabia', dialCode: '+966', flag: '🇸🇦' },
+  { code: 'QA', name: 'Qatar', dialCode: '+974', flag: '🇶🇦' },
+  { code: 'KW', name: 'Kuwait', dialCode: '+965', flag: '🇰🇼' },
+  { code: 'OM', name: 'Oman', dialCode: '+968', flag: '🇴🇲' },
+  { code: 'BH', name: 'Bahrain', dialCode: '+973', flag: '🇧🇭' },
+  { code: 'NP', name: 'Nepal', dialCode: '+977', flag: '🇳🇵' },
+  { code: 'BD', name: 'Bangladesh', dialCode: '+880', flag: '🇧🇩' },
+  { code: 'LK', name: 'Sri Lanka', dialCode: '+94', flag: '🇱🇰' },
+  { code: 'DE', name: 'Germany', dialCode: '+49', flag: '🇩🇪' },
+  { code: 'FR', name: 'France', dialCode: '+33', flag: '🇫🇷' },
+  { code: 'MY', name: 'Malaysia', dialCode: '+60', flag: '🇲🇾' },
+];
 
 interface AuthScreenProps {
   onLoginSuccess: (session: UserSession) => void;
@@ -32,6 +78,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 600 || height >= 950;
+  const { isDark, colors } = useTheme();
 
   // Universal Loader state
   const [loaderState, setLoaderState] = useState<{
@@ -50,19 +97,95 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [resendTimer, setResendTimer] = useState(30);
   const [showOtpModal, setShowOtpModal] = useState(false);
   const otpInputRef = useRef<any>(null);
-  const [storedUserName, setStoredUserName] = useState('Deepak Chouhan');
+  const [storedUserName, setStoredUserName] = useState('Rathi Vijay Sharma');
 
   // Register form fields (Full Name, DOB, Gender, Address, Aadhaar Card, Mobile No, OTP)
   const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
   const [regDob, setRegDob] = useState('');
   const [regGender, setRegGender] = useState<'Male' | 'Female' | 'Other'>('Male');
   const [regAddress, setRegAddress] = useState('');
   const [regAadhaar, setRegAadhaar] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<CountryItem>(COUNTRY_LIST[0]);
+  const [showCountryModal, setShowCountryModal] = useState<boolean>(false);
+  const [countrySearchQuery, setCountrySearchQuery] = useState<string>('');
+  const [regCountryCode, setRegCountryCode] = useState('+91');
   const [regMobile, setRegMobile] = useState('');
   const [regOtp, setRegOtp] = useState('');
   const [regOtpSent, setRegOtpSent] = useState(false);
   const [regOtpTimer, setRegOtpTimer] = useState(30);
   const [regConsentChecked, setRegConsentChecked] = useState(false);
+
+  // Calendar Modal State
+  const now = new Date();
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false);
+  const [calendarYear, setCalendarYear] = useState<number>(now.getFullYear() - 25);
+  const [calendarMonth, setCalendarMonth] = useState<number>(now.getMonth());
+  const [calendarDay, setCalendarDay] = useState<number>(now.getDate());
+  const [showYearGrid, setShowYearGrid] = useState(false);
+  const [showMonthGrid, setShowMonthGrid] = useState(false);
+
+  const openCalendarPicker = () => {
+    let parsed = false;
+    if (regDob && regDob.length === 10) {
+      const parts = regDob.split('/');
+      if (parts.length === 3) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        const currentYr = new Date().getFullYear();
+        if (!isNaN(d) && !isNaN(m) && m >= 0 && m < 12 && !isNaN(y) && y > 1900 && y <= currentYr) {
+          setCalendarDay(d);
+          setCalendarMonth(m);
+          setCalendarYear(y);
+          parsed = true;
+        }
+      }
+    }
+    if (!parsed) {
+      const currentDate = new Date();
+      setCalendarDay(currentDate.getDate());
+      setCalendarMonth(currentDate.getMonth());
+      setCalendarYear(currentDate.getFullYear() - 25);
+    }
+    setShowYearGrid(false);
+    setShowMonthGrid(false);
+    setShowDatePickerModal(true);
+  };
+
+  const handleConfirmCalendarDate = () => {
+    const dStr = calendarDay.toString().padStart(2, '0');
+    const mStr = (calendarMonth + 1).toString().padStart(2, '0');
+    const formatted = `${dStr}/${mStr}/${calendarYear}`;
+    setRegDob(formatted);
+    setShowDatePickerModal(false);
+  };
+
+  const handlePrevMonth = () => {
+    if (calendarMonth === 0) {
+      setCalendarMonth(11);
+      setCalendarYear((prev) => prev - 1);
+    } else {
+      setCalendarMonth((prev) => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (calendarMonth === 11) {
+      setCalendarMonth(0);
+      setCalendarYear((prev) => prev + 1);
+    } else {
+      setCalendarMonth((prev) => prev + 1);
+    }
+  };
+
+  const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstDayOfWeek = (year: number, month: number) => {
+    return new Date(year, month, 1).getDay();
+  };
 
   // Modals
   const [showForgotPinModal, setShowForgotPinModal] = useState(false);
@@ -80,6 +203,30 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [currentPinInput, setCurrentPinInput] = useState('');
   const [newChangePinInput, setNewChangePinInput] = useState('');
   const [confirmChangePinInput, setConfirmChangePinInput] = useState('');
+
+  // Reset / Clear Registration Form Fields
+  const resetRegisterForm = () => {
+    setRegName('');
+    setRegEmail('');
+    setRegDob('');
+    setRegGender('Male');
+    setRegAddress('');
+    setRegAadhaar('');
+    setSelectedCountry(COUNTRY_LIST[0]);
+    setRegCountryCode(COUNTRY_LIST[0].dialCode);
+    setRegMobile('');
+    setRegOtp('');
+    setRegOtpSent(false);
+    setRegOtpTimer(30);
+    setRegConsentChecked(false);
+  };
+
+  // Automatically reset form fields whenever navigating into or out of register screen
+  useEffect(() => {
+    if (authMode === 'register') {
+      resetRegisterForm();
+    }
+  }, [authMode]);
 
   // Countdown timer for Resend OTP in Modal
   useEffect(() => {
@@ -130,6 +277,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   // Hardware device back press handler for active modals & multi-step login/register
   useEffect(() => {
     const onBackPress = () => {
+      if (showCountryModal) {
+        setShowCountryModal(false);
+        return true;
+      }
+      if (showDatePickerModal) {
+        setShowDatePickerModal(false);
+        return true;
+      }
       if (showOtpModal) {
         setShowOtpModal(false);
         return true;
@@ -151,6 +306,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         return true;
       }
       if (authMode === 'register') {
+        resetRegisterForm();
         setAuthMode('login');
         return true;
       }
@@ -268,10 +424,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     }
     setRegOtpSent(true);
     setRegOtpTimer(30);
-    setRegOtp('');
+    setRegOtp('1234');
     Alert.alert(
       'OTP Sent',
-      `A 4-digit verification code has been sent to +91 ${cleaned}.\n\nDemo OTP: 1234`
+      `A 4-digit verification code has been sent to ${regCountryCode || '+91'} ${cleaned}.\n\nDemo OTP: 1234`
     );
   };
 
@@ -299,8 +455,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       Alert.alert('Mobile Number Required', 'Please enter a valid 10-digit mobile number.');
       return;
     }
-    if (regOtp.trim().length < 4) {
-      Alert.alert('OTP Required', 'Please enter the 4-digit verification OTP. (Demo OTP: 1234)');
+    const cleanOtp = regOtp.trim().replace(/[^0-9]/g, '');
+    if (!cleanOtp || cleanOtp.length < 4) {
+      Alert.alert('OTP Required', 'Please enter the 4-digit verification OTP (e.g. 1234).');
       return;
     }
     if (!regConsentChecked) {
@@ -314,17 +471,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setLoaderState({
       visible: true,
       message: 'Creating Health Account...',
-      subtitle: `Registering ${regName.trim()} with UHID GMCH-UD-${Math.floor(100000 + Math.random() * 900000)}`,
+      subtitle: `Registering ${regName.trim()} with UHID UHID-UD-${Math.floor(100000 + Math.random() * 900000)}`,
     });
     setTimeout(() => {
       setLoaderState({ visible: false });
-      setStoredUserName(regName.trim());
-      setMobileNumber(cleanMobile);
-      onLoginSuccess({
-        mobileNumber: cleanMobile,
-        name: regName.trim(),
-        isLoggedIn: true,
-      });
+      const registeredName = regName.trim();
+      resetRegisterForm();
+      setMobileNumber('');
+      setAuthMode('login');
+      Alert.alert(
+        'Registration Successful! 🎉',
+        `Health account for ${registeredName} has been registered successfully.`
+      );
     }, 750);
   };
 
@@ -417,17 +575,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
           >
             <View style={[styles.headerSideGroup, isTablet && { width: 44 }]}>
               <TouchableOpacity
-                onPress={() => setAuthMode('login')}
-                style={[styles.headerBackBtn, isTablet && { width: 42, height: 42, borderRadius: 21 }]}
+                onPress={() => {
+                  resetRegisterForm();
+                  setAuthMode('login');
+                }}
+                style={[styles.headerBackBtn, { backgroundColor: isDark ? colors.surface : '#F1F5F9' }, isTablet && { width: 42, height: 42, borderRadius: 21 }]}
                 activeOpacity={0.7}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <AppIcon name="back" size={isTablet ? 24 : 20} color="#0083B0" />
+                <AppIcon name="back" size={isTablet ? 24 : 20} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.headerCenterGroup}>
-              <Text style={[styles.headerTitleCentered, isTablet && { fontSize: 24 }]}>
+              <Text style={[styles.headerTitleCentered, { color: colors.primary }, isTablet && { fontSize: 24 }]}>
                 Patient Registration
               </Text>
             </View>
@@ -453,55 +614,81 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               <View style={styles.screenOuter}>
                 <View style={styles.pinStepCard}>
                   {/* 1. Full Name */}
-                  <Text style={[styles.fieldLabel, { marginTop: 2 }]}>Full Name *</Text>
-                  <View style={styles.regInputWithIcon}>
+                  <Text style={[styles.fieldLabel, { color: colors.textPrimary, marginTop: 2 }]}>Full Name *</Text>
+                  <View style={[styles.regInputWithIcon, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0' }]}>
                     <View style={styles.fieldIconBox}>
-                      <AppIcon name="user" size={18} color="#0083B0" />
+                      <AppIcon name="user" size={18} color={colors.primary} />
                     </View>
                     <TextInput
-                      style={styles.regTextInput}
+                      style={[styles.regTextInput, { color: colors.textPrimary }]}
                       placeholder="e.g. Aarav Chouhan"
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={colors.textSecondary || '#94A3B8'}
                       value={regName}
                       onChangeText={setRegName}
+                    />
+                  </View>
+
+                  {/* Email ID (Optional) */}
+                  <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>
+                    Email ID <Text style={{ fontSize: 12, color: colors.textSecondary || '#94A3B8', fontWeight: '400' }}>(Optional)</Text>
+                  </Text>
+                  <View style={[styles.regInputWithIcon, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0' }]}>
+                    <View style={styles.fieldIconBox}>
+                      <AppIcon name="email" size={18} color={colors.primary} />
+                    </View>
+                    <TextInput
+                      style={[styles.regTextInput, { color: colors.textPrimary }]}
+                      placeholder="e.g. aarav@example.com"
+                      placeholderTextColor={colors.textSecondary || '#94A3B8'}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      value={regEmail}
+                      onChangeText={setRegEmail}
                     />
                   </View>
 
                   {/* 2 & 3. DOB and Gender side by side */}
                   <View style={styles.twoColumnRow}>
                     <View style={{ flex: 1.1, marginRight: 8 }}>
-                      <Text style={styles.fieldLabel}>Date of Birth (DOB) *</Text>
-                      <View style={styles.regInputWithIcon}>
-                        <View style={styles.fieldIconBox}>
-                          <AppIcon name="calendar" size={18} color="#0083B0" />
-                        </View>
+                      <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Date of Birth (DOB) *</Text>
+                      <View style={[styles.regInputWithIcon, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0', paddingLeft: 12 }]}>
                         <TextInput
-                          style={styles.regTextInput}
+                          style={[styles.regTextInput, { color: colors.textPrimary }]}
                           placeholder="DD / MM / YYYY"
-                          placeholderTextColor="#94A3B8"
+                          placeholderTextColor={colors.textSecondary || '#94A3B8'}
                           keyboardType="number-pad"
                           maxLength={10}
                           value={regDob}
                           onChangeText={handleDobChange}
                         />
+                        <TouchableOpacity
+                          onPress={openCalendarPicker}
+                          activeOpacity={0.7}
+                          style={{ paddingHorizontal: 10, paddingVertical: 8 }}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <AppIcon name="calendar" size={18} color={colors.primary} />
+                        </TouchableOpacity>
                       </View>
                     </View>
 
                     <View style={{ flex: 0.9, marginLeft: 8 }}>
-                      <Text style={styles.fieldLabel}>Gender *</Text>
-                      <View style={styles.genderPillsContainer}>
+                      <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Gender *</Text>
+                      <View style={[styles.genderPillsContainer, { borderColor: isDark ? colors.border : '#E2E8F0' }]}>
                         {(['Male', 'Female', 'Other'] as const).map((g) => (
                           <TouchableOpacity
                             key={g}
                             style={[
                               styles.genderPill,
-                              regGender === g && styles.genderPillActive,
+                              { backgroundColor: colors.surface },
+                              regGender === g && [styles.genderPillActive, { backgroundColor: colors.primary }],
                             ]}
                             onPress={() => setRegGender(g)}
                           >
                             <Text
                               style={[
                                 styles.genderPillText,
+                                { color: colors.textSecondary },
                                 regGender === g && styles.genderPillTextActive,
                               ]}
                             >
@@ -514,15 +701,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   </View>
 
                   {/* 4. Residential Address */}
-                  <Text style={styles.fieldLabel}>Residential Address *</Text>
-                  <View style={[styles.regInputWithIcon, { height: 72, alignItems: 'flex-start', paddingTop: 10 }]}>
+                  <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Residential Address *</Text>
+                  <View style={[styles.regInputWithIcon, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0', height: 72, alignItems: 'flex-start', paddingTop: 10 }]}>
                     <View style={[styles.fieldIconBox, { marginTop: 2 }]}>
-                      <AppIcon name="location" size={18} color="#0083B0" />
+                      <AppIcon name="location" size={18} color={colors.primary} />
                     </View>
                     <TextInput
-                      style={[styles.regTextInput, { height: 56, textAlignVertical: 'top' }]}
+                      style={[styles.regTextInput, { color: colors.textPrimary, height: 56, textAlignVertical: 'top' }]}
                       placeholder="House/Flat No., Street, City, Pincode"
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={colors.textSecondary || '#94A3B8'}
                       multiline
                       value={regAddress}
                       onChangeText={setRegAddress}
@@ -530,15 +717,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   </View>
 
                   {/* 5. Aadhaar Card */}
-                  <Text style={styles.fieldLabel}>Aadhaar Card Number *</Text>
-                  <View style={styles.regInputWithIcon}>
+                  <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Aadhaar Card Number *</Text>
+                  <View style={[styles.regInputWithIcon, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0' }]}>
                     <View style={styles.fieldIconBox}>
-                      <AppIcon name="card" size={18} color="#0083B0" />
+                      <AppIcon name="card" size={18} color={colors.primary} />
                     </View>
                     <TextInput
-                      style={styles.regTextInput}
+                      style={[styles.regTextInput, { color: colors.textPrimary }]}
                       placeholder="XXXX XXXX XXXX (12-digit UIDAI)"
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={colors.textSecondary || '#94A3B8'}
                       keyboardType="number-pad"
                       maxLength={14}
                       value={regAadhaar}
@@ -547,17 +734,26 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   </View>
 
                   {/* 6. Mobile Number */}
-                  <Text style={styles.fieldLabel}>Mobile Number *</Text>
-                  <View style={styles.regInputWithIcon}>
-                    <View style={styles.flagContainer}>
-                      <Text style={{ fontSize: 16 }}>🇮🇳</Text>
-                      <Text style={[styles.countryCodeText, { marginLeft: 6 }]}>+91</Text>
-                    </View>
+                  <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Mobile Number *</Text>
+                  <View style={[styles.regInputWithIcon, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0' }]}>
+                    <TouchableOpacity
+                      style={styles.flagContainerDropdown}
+                      onPress={() => {
+                        setCountrySearchQuery('');
+                        setShowCountryModal(true);
+                      }}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Text style={{ fontSize: 16 }}>{selectedCountry.flag}</Text>
+                      <Text style={[styles.countryCodeText, { color: colors.textPrimary, marginLeft: 4 }]}>{selectedCountry.dialCode}</Text>
+                      <AppIcon name="chevron-down" size={13} color={colors.primary} style={{ marginLeft: 3 }} />
+                    </TouchableOpacity>
                     <View style={styles.inputDivider} />
                     <TextInput
-                      style={styles.regTextInput}
+                      style={[styles.regTextInput, { color: colors.textPrimary }]}
                       placeholder="10-digit mobile number"
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={colors.textSecondary || '#94A3B8'}
                       keyboardType="number-pad"
                       maxLength={10}
                       value={regMobile}
@@ -566,7 +762,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                     <TouchableOpacity
                       style={[
                         styles.inlineSendOtpBtn,
-                        regOtpSent && regOtpTimer > 0 && { backgroundColor: '#F1F5F9' },
+                        { backgroundColor: colors.primary },
+                        regOtpSent && regOtpTimer > 0 && { backgroundColor: isDark ? colors.surface : '#F1F5F9' },
                       ]}
                       onPress={handleSendRegOtp}
                       activeOpacity={0.8}
@@ -574,7 +771,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                       <Text
                         style={[
                           styles.inlineSendOtpText,
-                          regOtpSent && regOtpTimer > 0 && { color: '#64748B' },
+                          regOtpSent && regOtpTimer > 0 && { color: colors.textSecondary },
                         ]}
                       >
                         {regOtpSent
@@ -588,19 +785,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
                   {/* 7. OTP Verification */}
                   <View style={styles.labelWithBadgeRow}>
-                    <Text style={[styles.fieldLabel, { marginTop: 0, marginBottom: 0 }]}>Enter OTP *</Text>
-                    {/* <View style={styles.demoBadge}>
-                      <Text style={styles.demoBadgeText}>Demo OTP: 1234</Text>
-                    </View> */}
+                    <Text style={[styles.fieldLabel, { color: colors.textPrimary, marginTop: 0, marginBottom: 0 }]}>Enter OTP *</Text>
                   </View>
-                  <View style={[styles.regInputWithIcon, { marginTop: 6 }]}>
+                  <View style={[styles.regInputWithIcon, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0', marginTop: 6 }]}>
                     <View style={styles.fieldIconBox}>
-                      <AppIcon name="key" size={18} color="#0083B0" />
+                      <AppIcon name="key" size={18} color={colors.primary} />
                     </View>
                     <TextInput
-                      style={styles.regTextInput}
+                      style={[styles.regTextInput, { color: colors.textPrimary }]}
                       placeholder="Enter 4-digit verification code"
-                      placeholderTextColor="#94A3B8"
+                      placeholderTextColor={colors.textSecondary || '#94A3B8'}
                       keyboardType="number-pad"
                       maxLength={4}
                       value={regOtp}
@@ -617,26 +811,29 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   <TouchableOpacity
                     style={[
                       styles.consentBoxContainer,
-                      regConsentChecked && styles.consentBoxContainerChecked,
+                      { backgroundColor: isDark ? colors.surface : '#F8FAFC', borderColor: isDark ? colors.border : '#E2E8F0' },
+                      regConsentChecked && [styles.consentBoxContainerChecked, { backgroundColor: colors.primaryLight, borderColor: colors.primary }],
                     ]}
-                    activeOpacity={0.75}
+                    activeOpacity={0.7}
                     onPress={() => setRegConsentChecked((prev) => !prev)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <View
+                      pointerEvents="none"
                       style={[
                         styles.consentCheckbox,
-                        regConsentChecked && styles.consentCheckboxChecked,
+                        regConsentChecked && [styles.consentCheckboxChecked, { backgroundColor: colors.primary, borderColor: colors.primary }],
                       ]}
                     >
                       {regConsentChecked && (
                         <AppIcon name="check" size={13} color="#FFFFFF" />
                       )}
                     </View>
-                    <Text style={styles.consentText}>
+                    <Text pointerEvents="none" style={[styles.consentText, { color: colors.textSecondary }]}>
                       Are you sure you want to share your details with{' '}
-                      <Text style={styles.consentAppName}>
+                      <Text style={[styles.consentAppName, { color: colors.primary }]}>
                         "Patient Portal"{' '}
-                        <AppIcon name="hospital" size={14} color="#0083B0" />
+                        <AppIcon name="hospital" size={14} color={colors.primary} />
                       </Text>{' '}
                       app?
                     </Text>
@@ -666,7 +863,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
                   <TouchableOpacity
                     style={styles.switchNumberBtn}
-                    onPress={() => setAuthMode('login')}
+                    onPress={() => {
+                      resetRegisterForm();
+                      setAuthMode('login');
+                    }}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.switchNumberText}>Already registered? Log In</Text>
@@ -686,6 +886,302 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
           </KeyboardAvoidingView>
         </SafeAreaView>
       )}
+
+      {/* COUNTRY SELECTOR DROPDOWN MODAL */}
+      <Modal
+        visible={showCountryModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCountryModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.calModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCountryModal(false)}
+        >
+          <View
+            style={[styles.calModalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onStartShouldSetResponder={() => true}
+          >
+            {/* Modal Header */}
+            <View style={styles.calHeaderRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={[styles.calHeaderIconWrap, { backgroundColor: colors.primaryLight }]}>
+                  <Text style={{ fontSize: 18 }}>🌍</Text>
+                </View>
+                <Text style={[styles.calHeaderTitle, { color: colors.textPrimary }]}>Select Country Code</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowCountryModal(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <AppIcon name="close" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input Box */}
+            <View style={[styles.countrySearchBox, { backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9', borderColor: colors.border }]}>
+              <AppIcon name="search" size={16} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.countrySearchInput, { color: colors.textPrimary }]}
+                placeholder="Search country or code..."
+                placeholderTextColor={colors.textSecondary || '#94A3B8'}
+                value={countrySearchQuery}
+                onChangeText={setCountrySearchQuery}
+              />
+            </View>
+
+            {/* Country List ScrollView */}
+            <ScrollView style={{ maxHeight: 280, marginTop: 8 }} showsVerticalScrollIndicator={true}>
+              {COUNTRY_LIST.filter(
+                (c) =>
+                  c.name.toLowerCase().includes(countrySearchQuery.toLowerCase()) ||
+                  c.dialCode.includes(countrySearchQuery)
+              ).map((country) => {
+                const isSelected = selectedCountry.code === country.code;
+                return (
+                  <TouchableOpacity
+                    key={country.code}
+                    style={[
+                      styles.countryItemRow,
+                      { borderColor: colors.border },
+                      isSelected && { backgroundColor: isDark ? colors.surfaceVariant : '#F0F9FF' },
+                    ]}
+                    onPress={() => {
+                      setSelectedCountry(country);
+                      setRegCountryCode(country.dialCode);
+                      setShowCountryModal(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontSize: 20, marginRight: 10 }}>{country.flag}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.countryNameText, { color: colors.textPrimary }]}>{country.name}</Text>
+                    </View>
+                    <Text style={[styles.countryDialCodeText, { color: colors.primary }]}>{country.dialCode}</Text>
+                    {isSelected && (
+                      <AppIcon name="check" size={16} color={colors.primary} style={{ marginLeft: 8 }} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* CALENDAR PICKER MODAL */}
+      <Modal
+        visible={showDatePickerModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDatePickerModal(false)}
+      >
+        <View style={styles.calModalOverlay}>
+          <View style={[styles.calModalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {/* Modal Header */}
+            <View style={styles.calHeaderRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={[styles.calHeaderIconWrap, { backgroundColor: colors.primaryLight }]}>
+                  <AppIcon name="calendar" size={18} color={colors.primary} />
+                </View>
+                <Text style={[styles.calHeaderTitle, { color: colors.textPrimary }]}>Select Date of Birth</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowDatePickerModal(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <AppIcon name="close" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Month & Year Navigation Bar */}
+            <View style={styles.calNavRow}>
+              <TouchableOpacity
+                style={[styles.calNavArrowBtn, { backgroundColor: colors.primaryLight }]}
+                onPress={handlePrevMonth}
+                activeOpacity={0.7}
+              >
+                <AppIcon name="back" size={18} color={colors.primary} />
+              </TouchableOpacity>
+
+              {/* Month Selector Pill */}
+              <TouchableOpacity
+                style={[styles.calSelectPill, { backgroundColor: colors.primaryLight }, showMonthGrid && { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setShowMonthGrid((prev) => !prev);
+                  setShowYearGrid(false);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.calSelectPillText, { color: colors.primary }, showMonthGrid && { color: '#FFFFFF' }]}>
+                  {MONTH_NAMES[calendarMonth]}
+                </Text>
+                <AppIcon name="chevron-down" size={13} color={showMonthGrid ? '#FFFFFF' : colors.primary} />
+              </TouchableOpacity>
+
+              {/* Year Selector Pill */}
+              <TouchableOpacity
+                style={[styles.calSelectPill, { backgroundColor: colors.primaryLight }, showYearGrid && { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setShowYearGrid((prev) => !prev);
+                  setShowMonthGrid(false);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.calSelectPillText, { color: colors.primary }, showYearGrid && { color: '#FFFFFF' }]}>
+                  {calendarYear}
+                </Text>
+                <AppIcon name="chevron-down" size={13} color={showYearGrid ? '#FFFFFF' : colors.primary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.calNavArrowBtn, { backgroundColor: colors.primaryLight }]}
+                onPress={handleNextMonth}
+                activeOpacity={0.7}
+              >
+                <AppIcon name="chevron-right" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* BODY CONTENT: Year Grid, Month Grid, or Days Grid */}
+            {showYearGrid ? (
+              /* YEAR SELECTION GRID */
+              <View style={styles.calGridContainer}>
+                <Text style={[styles.calGridHintText, { color: colors.textSecondary }]}>Tap to select Birth Year:</Text>
+                <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={true}>
+                  <View style={styles.yearGridWrap}>
+                    {GENERATED_YEARS.map((y) => {
+                      const isSelected = y === calendarYear;
+                      return (
+                        <TouchableOpacity
+                          key={y}
+                          style={[
+                            styles.yearGridItem,
+                            { backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9' },
+                            isSelected && [styles.yearGridItemActive, { backgroundColor: colors.primary }],
+                          ]}
+                          onPress={() => {
+                            setCalendarYear(y);
+                            setShowYearGrid(false);
+                          }}
+                          activeOpacity={0.8}
+                        >
+                          <Text
+                            style={[
+                              styles.yearGridItemText,
+                              { color: colors.textPrimary },
+                              isSelected && styles.yearGridItemTextActive,
+                            ]}
+                          >
+                            {y}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              </View>
+            ) : showMonthGrid ? (
+              /* MONTH SELECTION GRID */
+              <View style={styles.calGridContainer}>
+                <Text style={[styles.calGridHintText, { color: colors.textSecondary }]}>Tap to select Month:</Text>
+                <View style={styles.monthGridWrap}>
+                  {MONTH_NAMES.map((mName, idx) => {
+                    const isSelected = idx === calendarMonth;
+                    return (
+                      <TouchableOpacity
+                        key={mName}
+                        style={[
+                          styles.monthGridItem,
+                          { backgroundColor: isDark ? colors.surfaceVariant : '#F1F5F9' },
+                          isSelected && [styles.monthGridItemActive, { backgroundColor: colors.primary }],
+                        ]}
+                        onPress={() => {
+                          setCalendarMonth(idx);
+                          setShowMonthGrid(false);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text
+                          style={[
+                            styles.monthGridItemText,
+                            { color: colors.textPrimary },
+                            isSelected && styles.monthGridItemTextActive,
+                          ]}
+                        >
+                          {mName.slice(0, 3)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : (
+              /* DAYS GRID */
+              <View style={styles.calDaysContainer}>
+                {/* Day Names Row */}
+                <View style={styles.calDayNamesRow}>
+                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((dName) => (
+                    <Text key={dName} style={[styles.calDayNameText, { color: colors.textSecondary }]}>
+                      {dName}
+                    </Text>
+                  ))}
+                </View>
+
+                {/* Days Numbers Matrix */}
+                <View style={styles.calDaysMatrix}>
+                  {/* Blank leading slots */}
+                  {Array.from({ length: getFirstDayOfWeek(calendarYear, calendarMonth) }).map((_, i) => (
+                    <View key={`blank-${i}`} style={styles.calDayCellEmpty} />
+                  ))}
+
+                  {/* Days 1 to N */}
+                  {Array.from({ length: getDaysInMonth(calendarYear, calendarMonth) }).map((_, i) => {
+                    const dayNum = i + 1;
+                    const isSelected = dayNum === calendarDay;
+                    return (
+                      <TouchableOpacity
+                        key={`day-${dayNum}`}
+                        style={[
+                          styles.calDayCell,
+                          { backgroundColor: isDark ? colors.surfaceVariant : '#F8FAFC' },
+                          isSelected && [styles.calDayCellActive, { backgroundColor: colors.primary, shadowColor: colors.primary }],
+                        ]}
+                        onPress={() => setCalendarDay(dayNum)}
+                        activeOpacity={0.8}
+                      >
+                        <Text
+                          style={[
+                            styles.calDayCellText,
+                            { color: colors.textPrimary },
+                            isSelected && styles.calDayCellTextActive,
+                          ]}
+                        >
+                          {dayNum}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            {/* Selected Preview & Action Footer */}
+            <View style={[styles.calFooterRow, { borderTopColor: colors.border }]}>
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity
+                style={[styles.calConfirmBtn, { backgroundColor: colors.primary }]}
+                onPress={handleConfirmCalendarDate}
+                activeOpacity={0.85}
+              >
+                <AppIcon name="check" size={15} color="#FFFFFF" />
+                <Text style={styles.calConfirmBtnText}>Set DOB</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* NEED HELP MODAL */}
       <Modal
@@ -711,8 +1207,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             </Text>
 
             <View style={styles.helpOptionCard}>
-              <View style={[styles.helpIconCircle, { backgroundColor: '#E0F2FE' }]}>
-                <AppIcon name="phone" size={20} color="#0284C7" />
+              <View style={[styles.helpIconCircle, { backgroundColor: colors.primaryLight }]}>
+                <AppIcon name="phone" size={20} color={colors.primary} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.helpOptionTitle}>Toll-Free Helpline</Text>
@@ -1554,11 +2050,248 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
   },
+  countryCodeInput: {
+    fontSize: 15.5,
+    fontWeight: '700',
+    minWidth: 42,
+    paddingVertical: 0,
+    paddingHorizontal: 2,
+  },
+  // CALENDAR MODAL STYLES
+  calModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+  },
+  calModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    padding: 18,
+    shadowColor: '#0083B0',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  calHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  calHeaderIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DEF0FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  calHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  calNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginVertical: 14,
+    paddingHorizontal: 4,
+  },
+  calNavArrowBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#DEF0FD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calSelectPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DEF0FD',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    gap: 6,
+  },
+  calSelectPillText: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#0083B0',
+  },
+  calGridContainer: {
+    paddingVertical: 10,
+  },
+  calGridHintText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  yearGridWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  yearGridItem: {
+    width: '23%',
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  yearGridItemActive: {
+    backgroundColor: '#0083B0',
+  },
+  yearGridItemText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  yearGridItemTextActive: {
+    color: '#FFFFFF',
+  },
+  monthGridWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  monthGridItem: {
+    width: '31%',
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthGridItemActive: {
+    backgroundColor: '#0083B0',
+  },
+  monthGridItemText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  monthGridItemTextActive: {
+    color: '#FFFFFF',
+  },
+  calDaysContainer: {
+    paddingVertical: 6,
+  },
+  calDayNamesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 8,
+  },
+  calDayNameText: {
+    width: 36,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  calDaysMatrix: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 6,
+  },
+  calDayCellEmpty: {
+    width: '14.28%',
+    height: 36,
+  },
+  calDayCell: {
+    width: '14.28%',
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+  },
+  calDayCellActive: {
+    backgroundColor: '#0083B0',
+    shadowColor: '#0083B0',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  calDayCellText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  calDayCellTextActive: {
+    color: '#FFFFFF',
+  },
+  calFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  calConfirmBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0083B0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    gap: 6,
+  },
+  calConfirmBtnText: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
   resendActionLink: {
     fontSize: 13.5,
     fontWeight: '800',
     color: '#0284C7',
     textDecorationLine: 'underline',
+  },
+  flagContainerDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 4,
+  },
+  countrySearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  countrySearchInput: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '500',
+    marginLeft: 8,
+    paddingVertical: 0,
+  },
+  countryItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderBottomWidth: 0.5,
+  },
+  countryNameText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  countryDialCodeText: {
+    fontSize: 13.5,
+    fontWeight: '800',
   },
 });
 
