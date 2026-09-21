@@ -79,10 +79,22 @@ const getAlertTheme = (title: string, buttons?: AlertButtonConfig[], themeColors
   const lowerTitle = title.toLowerCase();
   const hasDestructive = buttons?.some((b) => b.style === 'destructive');
   const primary = themeColors?.primary || '#0083B0';
-  const primaryLight = themeColors?.primaryLight || '#DEF0FD';
+  const primaryLight = themeColors?.primaryLight || '#E0F2FE';
+  // Exit alert: No icon, App Theme Color (not red)
+  if (lowerTitle.includes('exit')) {
+    return {
+      hideIcon: true,
+      icon: 'info' as IconType,
+      iconColor: primary,
+      badgeBg: primaryLight,
+      badgeBorder: primaryLight,
+      accentColor: primary,
+    };
+  }
 
   if (hasDestructive || lowerTitle.includes('logout') || lowerTitle.includes('remove') || lowerTitle.includes('delete')) {
     return {
+      hideIcon: false,
       icon: (lowerTitle.includes('logout') ? 'logout' : 'trash') as IconType,
       iconColor: '#DC2626',
       badgeBg: '#FEE2E2',
@@ -297,21 +309,24 @@ export const CustomAlertContainer: React.FC = () => {
               backgroundColor: colors.surface,
               borderColor: colors.border,
               borderWidth: isDark ? 1 : 1.5,
+              paddingTop: theme.hideIcon ? 28 : 24,
             },
           ]}
         >
-          {/* Top Curvy Theme Badge with Icon */}
-          <View
-            style={[
-              styles.iconBadge,
-              {
-                backgroundColor: isDark ? colors.surfaceVariant : theme.badgeBg,
-                borderColor: isDark ? colors.border : theme.badgeBorder,
-              },
-            ]}
-          >
-            <AppIcon name={theme.icon} size={28} color={theme.iconColor} />
-          </View>
+          {/* Top Curvy Theme Badge with Icon (hidden for Exit alert) */}
+          {!theme.hideIcon && (
+            <View
+              style={[
+                styles.iconBadge,
+                {
+                  backgroundColor: isDark ? colors.surfaceVariant : theme.badgeBg,
+                  borderColor: isDark ? colors.border : theme.badgeBorder,
+                },
+              ]}
+            >
+              <AppIcon name={theme.icon} size={28} color={theme.iconColor} />
+            </View>
+          )}
 
           {/* Curvy Accent Header Border Line */}
           <View style={[styles.curvyTopAccent, { backgroundColor: theme.accentColor }]} />
@@ -334,7 +349,7 @@ export const CustomAlertContainer: React.FC = () => {
           >
             {buttons.map((btn, index) => {
               const isCancel = btn.style === 'cancel';
-              const isDestructive = btn.style === 'destructive';
+              const isDestructive = !theme.hideIcon && btn.style === 'destructive';
 
               const btnStyle: any = isCancel
                 ? [styles.cancelButton, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]

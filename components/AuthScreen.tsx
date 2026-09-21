@@ -23,7 +23,7 @@ import MobileEntryScreen from './MobileEntryScreen';
 import OtpScreen from './OtpScreen';
 import UniversalLoader from './UniversalLoader';
 import IMAGES from './imageAssets';
-import { useTheme } from './ThemeContext';
+import { lightColors } from './ThemeContext';
 
 const MONTH_NAMES = [
   'January',
@@ -78,7 +78,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 600 || height >= 950;
-  const { isDark, colors } = useTheme();
+  // Register & Login pages always use default theme colors
+  const isDark = false;
+  const colors = lightColors;
 
   // Universal Loader state
   const [loaderState, setLoaderState] = useState<{

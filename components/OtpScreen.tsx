@@ -15,7 +15,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
 import IMAGES from './imageAssets';
-import { useTheme } from './ThemeContext';
+import { lightColors } from './ThemeContext';
 
 interface OtpScreenProps {
   mobileNumber: string;
@@ -43,7 +43,9 @@ export const OtpScreen: React.FC<OtpScreenProps> = ({
   const isTablet = width >= 600 || height >= 950;
   const pinInputRef = useRef<any>(null);
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const { isDark, colors } = useTheme();
+  // Login OTP page always uses default theme colors
+  const isDark = false;
+  const colors = lightColors;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>

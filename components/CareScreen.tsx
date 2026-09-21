@@ -466,7 +466,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
               {
                 paddingHorizontal: isTablet ? 20 : 16,
                 paddingTop: isTablet ? 16 : 14,
-                paddingBottom: insets.bottom + 110,
+                paddingBottom: insets.bottom + (isTablet ? 135 : 110),
               },
             ]}
             showsVerticalScrollIndicator={false}
@@ -920,7 +920,7 @@ export const CareScreen: React.FC<CareScreenProps> = ({
             {
               backgroundColor: colors.surface,
               borderColor: isDark ? colors.border : '#E2E8F0',
-              bottom: Math.max(insets.bottom, 10),
+              bottom: Math.max(insets.bottom + (isTablet ? 14 : 0), isTablet ? 22 : 10),
             },
           ]}
         >
@@ -996,7 +996,16 @@ export const CareScreen: React.FC<CareScreenProps> = ({
         >
           <View style={styles.sheetBottomOverlay}>
             <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowAttachModal(false)} />
-            <View style={[styles.waPhotoSheet, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.waPhotoSheet,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  paddingBottom: Math.max(insets.bottom + (isTablet ? 28 : 14), isTablet ? 48 : 28),
+                },
+              ]}
+            >
               <View style={styles.waSheetHandleBar} />
 
               <Text style={[styles.waSheetTitle, { color: colors.textPrimary }]}>Attach Proof or Document</Text>
@@ -1114,7 +1123,16 @@ export const CareScreen: React.FC<CareScreenProps> = ({
         >
           <View style={styles.sheetBottomOverlay}>
             <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowMemberSwitchSheet(false)} />
-            <View style={[styles.switchMemberSheetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.switchMemberSheetCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  paddingBottom: Math.max(insets.bottom + (isTablet ? 28 : 14), isTablet ? 48 : 28),
+                },
+              ]}
+            >
               <View style={styles.sheetHandleBar} />
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>

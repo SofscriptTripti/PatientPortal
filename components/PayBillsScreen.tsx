@@ -483,7 +483,7 @@ export const PayBillsScreen: React.FC<PayBillsScreenProps> = ({
             {
               paddingHorizontal: isTablet ? 24 : 16,
               paddingTop: 14,
-              paddingBottom: insets.bottom + 40,
+              paddingBottom: insets.bottom + (isTablet ? 70 : 40),
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -1058,7 +1058,7 @@ export const PayBillsScreen: React.FC<PayBillsScreenProps> = ({
                 {
                   backgroundColor: colors.surface,
                   borderColor: colors.border,
-                  paddingBottom: Math.max(insets.bottom + 20, 30),
+                  paddingBottom: Math.max(insets.bottom + (isTablet ? 30 : 20), isTablet ? 52 : 36),
                 },
               ]}
             >

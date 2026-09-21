@@ -84,6 +84,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 600 || height >= 950;
+  // Little gap on left and right side (8px mobile, 12px tablet)
+  const bannerCardWidth = width - (isTablet ? 24 : 16);
+  const bannerCardHeight = Math.round(bannerCardWidth * (9 / 16));
   const { theme, setTheme, colorOptionId, setColorOptionId, colorOptions, isDark, colors } = useTheme();
 
   // Slide Bar & Settings State
@@ -170,14 +173,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const timer = setInterval(() => {
       setActiveBannerIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % PROMO_BANNERS.length;
-        const bannerCardWidth = isTablet ? 560 : width - 12;
         carouselRef.current?.scrollTo({ x: nextIndex * bannerCardWidth, animated: true });
         return nextIndex;
       });
     }, 3600);
 
     return () => clearInterval(timer);
-  }, [width, isTablet, PROMO_BANNERS.length]);
+  }, [bannerCardWidth, PROMO_BANNERS.length]);
 
   const openSlideBar = () => {
     setShowProfileMenu(true);
@@ -341,59 +343,59 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             {
               paddingHorizontal: isTablet ? 24 : 16,
               paddingTop: isTablet ? 14 : 12,
-              paddingBottom: insets.bottom + (isTablet ? 110 : 85),
+              paddingBottom: insets.bottom + (isTablet ? 130 : 90),
             },
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* 1. AUTO-SCROLLING RECTANGULAR HOSPITAL BANNER CAROUSEL (100% SINGLE POSTER PER SWIPE, ZERO CROPPING) */}
-          <View style={[styles.carouselWrapper, isTablet && { marginBottom: 18 }]}>
-            {(() => {
-              const cardWidth = isTablet ? 560 : width - 12;
-              const cardHeight = isTablet ? 260 : Math.round(cardWidth * 0.54);
-              return (
-                <ScrollView
-                  ref={carouselRef}
-                  horizontal
-                  pagingEnabled
-                  snapToInterval={cardWidth}
-                  snapToAlignment="center"
-                  decelerationRate="fast"
-                  showsHorizontalScrollIndicator={false}
-                  onMomentumScrollEnd={(e) => {
-                    const newIndex = Math.round(e.nativeEvent.contentOffset.x / cardWidth);
-                    if (newIndex >= 0 && newIndex < PROMO_BANNERS.length) {
-                      setActiveBannerIndex(newIndex);
-                    }
-                  }}
-                  style={{ width: cardWidth, alignSelf: 'center' }}
+          {/* 1. AUTO-SCROLLING RECTANGULAR HOSPITAL BANNER CAROUSEL */}
+          <View
+            style={[
+              styles.carouselWrapper,
+              { marginHorizontal: isTablet ? -12 : -8 },
+              isTablet && { marginBottom: 18 },
+            ]}
+          >
+            <ScrollView
+              ref={carouselRef}
+              horizontal
+              pagingEnabled
+              snapToInterval={bannerCardWidth}
+              snapToAlignment="center"
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                const newIndex = Math.round(e.nativeEvent.contentOffset.x / bannerCardWidth);
+                if (newIndex >= 0 && newIndex < PROMO_BANNERS.length) {
+                  setActiveBannerIndex(newIndex);
+                }
+              }}
+              style={{ width: bannerCardWidth, alignSelf: 'center' }}
+            >
+              {PROMO_BANNERS.map((banner) => (
+                <TouchableOpacity
+                  key={banner.id}
+                  activeOpacity={0.88}
+                  onPress={() => onOpenAnnouncements?.(banner.id)}
+                  style={[
+                    styles.posterCard,
+                    {
+                      width: bannerCardWidth,
+                      height: bannerCardHeight,
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                    },
+                  ]}
                 >
-                  {PROMO_BANNERS.map((banner) => (
-                    <TouchableOpacity
-                      key={banner.id}
-                      activeOpacity={0.88}
-                      onPress={() => onOpenAnnouncements?.(banner.id)}
-                      style={[
-                        styles.posterCard,
-                        {
-                          width: cardWidth,
-                          height: cardHeight,
-                          backgroundColor: colors.surface,
-                          borderColor: colors.border,
-                        },
-                      ]}
-                    >
-                      <Image
-                        source={banner.image}
-                        fadeDuration={0}
-                        style={styles.posterImageBg}
-                        resizeMode="contain"
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              );
-            })()}
+                  <Image
+                    source={banner.image}
+                    fadeDuration={0}
+                    style={styles.posterImageBg}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
             {/* Sleek Pagination Dots */}
             <View style={styles.paginationRow}>
@@ -431,7 +433,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <Animated.ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.servicesScrollContent}
+              scrollEnabled={!isTablet}
+              contentContainerStyle={[
+                styles.servicesScrollContent,
+                isTablet && styles.servicesScrollContentTablet,
+              ]}
               style={styles.servicesScrollView}
               scrollEventThrottle={16}
               onScroll={Animated.event(
@@ -443,94 +449,96 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             >
               {/* Item 1: Book Appointment */}
               <TouchableOpacity
-                style={styles.serviceItem}
+                style={[styles.serviceItem, isTablet && styles.serviceItemTablet]}
                 onPress={onOpenBookVisit || (() => Alert.alert('Book Appointment', 'Select doctor or department to book a new appointment.'))}
                 activeOpacity={0.75}
               >
-                <View style={styles.serviceIconWrap}>
+                <View style={[styles.serviceIconWrap, isTablet && styles.serviceIconWrapTablet]}>
                   <AppIcon name="calendar" size={isTablet ? 22 : 18} color={colors.primary} />
                 </View>
-                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }, isTablet && styles.serviceLabelTablet]} numberOfLines={1}>
                   Book Appointment
                 </Text>
               </TouchableOpacity>
 
               {/* Item 2: Pay Bills */}
               <TouchableOpacity
-                style={styles.serviceItem}
+                style={[styles.serviceItem, isTablet && styles.serviceItemTablet]}
                 onPress={onOpenPayBills || (() => Alert.alert('Pay Bills', 'Viewing outstanding bills & payment options.'))}
                 activeOpacity={0.75}
               >
-                <View style={styles.serviceIconWrap}>
+                <View style={[styles.serviceIconWrap, isTablet && styles.serviceIconWrapTablet]}>
                   <AppIcon name="wallet-outline" size={isTablet ? 22 : 18} color={colors.primary} />
                 </View>
-                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }, isTablet && styles.serviceLabelTablet]} numberOfLines={1}>
                   Pay Bills
                 </Text>
               </TouchableOpacity>
 
               {/* Item 3: Book Test */}
               <TouchableOpacity
-                style={styles.serviceItem}
+                style={[styles.serviceItem, isTablet && styles.serviceItemTablet]}
                 onPress={onOpenBookTest || (() => Alert.alert('Book Test', 'Select lab test or diagnostic package to book.'))}
                 activeOpacity={0.75}
               >
-                <View style={styles.serviceIconWrap}>
+                <View style={[styles.serviceIconWrap, isTablet && styles.serviceIconWrapTablet]}>
                   <AppIcon name="flask" size={isTablet ? 22 : 18} color={colors.primary} />
                 </View>
-                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }, isTablet && styles.serviceLabelTablet]} numberOfLines={1}>
                   Book Test
                 </Text>
               </TouchableOpacity>
 
               {/* Item 4: Medicines */}
               <TouchableOpacity
-                style={styles.serviceItem}
+                style={[styles.serviceItem, isTablet && styles.serviceItemTablet]}
                 onPress={() => {
                   if (onOpenMedicines) onOpenMedicines();
                 }}
                 activeOpacity={0.75}
               >
-                <View style={styles.serviceIconWrap}>
+                <View style={[styles.serviceIconWrap, isTablet && styles.serviceIconWrapTablet]}>
                   <AppIcon name="pill" size={isTablet ? 22 : 18} color={colors.primary} />
                 </View>
-                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }, isTablet && styles.serviceLabelTablet]} numberOfLines={1}>
                   Medicines
                 </Text>
               </TouchableOpacity>
 
               {/* Item 5: Add Member */}
               <TouchableOpacity
-                style={styles.serviceItem}
+                style={[styles.serviceItem, isTablet && styles.serviceItemTablet]}
                 onPress={() => {
                   if (onOpenAddMember) onOpenAddMember();
                   else onOpenPatientList('Home', true);
                 }}
                 activeOpacity={0.75}
               >
-                <View style={styles.serviceIconWrap}>
+                <View style={[styles.serviceIconWrap, isTablet && styles.serviceIconWrapTablet]}>
                   <AppIcon name="usergroup-add" size={isTablet ? 22 : 18} color={colors.primary} />
                 </View>
-                <Text style={[styles.serviceLabel, { color: colors.textPrimary }]} numberOfLines={1}>
+                <Text style={[styles.serviceLabel, { color: colors.textPrimary }, isTablet && styles.serviceLabelTablet]} numberOfLines={1}>
                   Add Member
                 </Text>
               </TouchableOpacity>
             </Animated.ScrollView>
 
             {/* Scroll Indicator Track Pill at bottom of Card */}
-            <View style={styles.scrollTrackContainer}>
-              <View style={[styles.scrollTrackBg, { backgroundColor: isDark ? colors.border : '#CBD5E1' }]}>
-                <Animated.View
-                  style={[
-                    styles.scrollTrackThumb,
-                    {
-                      backgroundColor: isDark ? colors.primary : '#334155',
-                      transform: [{ translateX: servicesThumbTranslateX }],
-                    },
-                  ]}
-                />
+            {servicesContentWidth > servicesContainerWidth + 10 && (
+              <View style={styles.scrollTrackContainer}>
+                <View style={[styles.scrollTrackBg, { backgroundColor: isDark ? colors.border : '#CBD5E1' }]}>
+                  <Animated.View
+                    style={[
+                      styles.scrollTrackThumb,
+                      {
+                        backgroundColor: isDark ? colors.primary : '#334155',
+                        transform: [{ translateX: servicesThumbTranslateX }],
+                      },
+                    ]}
+                  />
+                </View>
               </View>
-            </View>
+            )}
           </View>
 
           {/* 2B. EXCLUSIVE HEALTH POINTS & REWARDS BANNER (BRIGHT SOFT CYAN CARD) */}
@@ -824,7 +832,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             {
               backgroundColor: colors.surface,
               borderColor: isDark ? colors.border : '#E2E8F0',
-              bottom: Math.max(insets.bottom, 10),
+              bottom: Math.max(insets.bottom + (isTablet ? 14 : 0), isTablet ? 22 : 10),
             },
           ]}
         >
@@ -1136,13 +1144,14 @@ const styles = StyleSheet.create({
   carouselWrapper: {
     marginBottom: 16,
     marginTop: 2,
+    alignItems: 'center',
   },
   posterCard: {
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 6,
+    padding: 0,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#0F253E',
@@ -1154,7 +1163,7 @@ const styles = StyleSheet.create({
   posterImageBg: {
     width: '100%',
     height: '100%',
-    borderRadius: 10,
+    borderRadius: 15,
   },
   posterOverlay: {
     flex: 1,
@@ -1244,6 +1253,7 @@ const styles = StyleSheet.create({
 
   // 2. SERVICES & QUICK ACCESS CARD (COMPACT HEIGHT PAYTM CARD CONTAINER)
   servicesCardContainer: {
+    width: '100%',
     borderRadius: 16,
     borderWidth: 1,
     paddingTop: 8,
@@ -1278,6 +1288,7 @@ const styles = StyleSheet.create({
     color: '#0083B0',
   },
   servicesScrollView: {
+    width: '100%',
     marginHorizontal: -4,
     marginBottom: 4,
   },
@@ -1286,11 +1297,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
+  servicesScrollContentTablet: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
   serviceItem: {
     width: 80,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 2,
+  },
+  serviceItemTablet: {
+    flex: 1,
+    width: 'auto',
+    maxWidth: '20%',
+    marginRight: 0,
+    paddingHorizontal: 2,
   },
   serviceIconWrap: {
     width: 28,
@@ -1299,12 +1323,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 2,
   },
+  serviceIconWrapTablet: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginBottom: 4,
+  },
   serviceLabel: {
     fontSize: 9.2,
     fontWeight: '600',
     textAlign: 'center',
     lineHeight: 12,
     letterSpacing: -0.2,
+  },
+  serviceLabelTablet: {
+    fontSize: 11.5,
+    lineHeight: 15,
   },
 
   // SCROLL INDICATOR TRACK PILL AT BOTTOM OF CARD

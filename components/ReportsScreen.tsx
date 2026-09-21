@@ -535,7 +535,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
             {
               paddingHorizontal: isTablet ? 20 : 16,
               paddingTop: isTablet ? 16 : 14,
-              paddingBottom: 110,
+              paddingBottom: insets.bottom + (isTablet ? 135 : 110),
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -743,7 +743,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
             {
               backgroundColor: colors.surface,
               borderColor: isDark ? colors.border : '#E2E8F0',
-              bottom: Math.max(insets.bottom, 10),
+              bottom: Math.max(insets.bottom + (isTablet ? 14 : 0), isTablet ? 22 : 10),
             },
           ]}
         >
@@ -836,7 +836,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                 styles.sheetPanel,
                 {
                   backgroundColor: colors.surface,
-                  paddingBottom: Math.max(insets.bottom, 20),
+                  paddingBottom: Math.max(insets.bottom + (isTablet ? 28 : 14), isTablet ? 48 : 28),
                 },
               ]}
               onStartShouldSetResponder={() => true}
@@ -922,7 +922,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                 styles.detailsSheetPanel,
                 {
                   backgroundColor: colors.surface,
-                  paddingBottom: Math.max(insets.bottom, 20),
+                  paddingBottom: Math.max(insets.bottom + (isTablet ? 28 : 14), isTablet ? 48 : 28),
                 },
               ]}
               onStartShouldSetResponder={() => true}

@@ -9,7 +9,7 @@ import {
   Alert,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
 import { UserSession } from './types';
 import { useTheme } from './ThemeContext';
@@ -108,6 +108,7 @@ export const AnnouncementsScreen: React.FC<AnnouncementsScreenProps> = ({
   onBack,
   onOpenBookVisit,
 }) => {
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
   const { isDark, colors } = useTheme();
@@ -183,7 +184,10 @@ export const AnnouncementsScreen: React.FC<AnnouncementsScreenProps> = ({
 
         {/* ANNOUNCEMENT CARDS LIST */}
         <ScrollView
-          contentContainerStyle={[styles.scrollListContent, { paddingBottom: 40 }]}
+          contentContainerStyle={[
+            styles.scrollListContent,
+            { paddingBottom: Math.max(insets.bottom + (isTablet ? 36 : 24), isTablet ? 54 : 36) },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {filteredAnnouncements.map((item) => (
@@ -309,7 +313,7 @@ const styles = StyleSheet.create({
   },
   bannerImageWrap: {
     width: '100%',
-    height: 170,
+    aspectRatio: 16 / 9,
     position: 'relative',
   },
   bannerImage: {

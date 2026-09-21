@@ -11,6 +11,7 @@ import {
   Dimensions,
   Animated,
   BackHandler,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
@@ -192,6 +193,8 @@ export default function MedicinesScreen({
   onAddHealthPoints,
 }: MedicinesScreenProps) {
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isTablet = width >= 600 || height >= 950;
   const { isDark, colors } = useTheme();
 
   // Active Member & Switch Member State
@@ -449,7 +452,13 @@ export default function MedicinesScreen({
         </View>
 
         {/* MAIN CONTENT AREA */}
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + (isTablet ? 120 : 90) },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
           {/* SWITCH MEMBER DROPDOWN BAR (EXACT SAME AS VISIT DETAILS & MEDICAL REPORTS) */}
           <View style={[styles.switchMemberCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.switchMemberLeft}>
@@ -716,7 +725,12 @@ export default function MedicinesScreen({
 
       {/* RIGHT FLOATING BUTTON: "BOOK YOUR MEDICINE" (MATCHING BOOK YOUR TEST FAB) */}
       <TouchableOpacity
-        style={styles.floatingOrderBtnRight}
+        style={[
+          styles.floatingOrderBtnRight,
+          {
+            bottom: Math.max(insets.bottom + (isTablet ? 24 : 12), isTablet ? 36 : 24),
+          },
+        ]}
         onPress={() => {
           setSelectedCategory('All');
           setSearchQuery('');
@@ -732,7 +746,15 @@ export default function MedicinesScreen({
       <Modal visible={showMemberSwitchSheet} transparent animationType="slide" onRequestClose={() => setShowMemberSwitchSheet(false)}>
         <View style={styles.modalBackdrop}>
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowMemberSwitchSheet(false)} activeOpacity={1} />
-          <View style={[styles.memberSheetContainer, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+          <View
+            style={[
+              styles.memberSheetContainer,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+                paddingBottom: Math.max(insets.bottom + (isTablet ? 28 : 14), isTablet ? 48 : 28),
+              },
+            ]}
+          >
             <View style={styles.sheetHandleBar} />
             <View style={styles.modalHeaderRow}>
               <Text style={[styles.confirmHeaderTitle, { color: isDark ? '#F1F5F9' : '#0F253E' }]}>Switch Family Member</Text>
@@ -783,7 +805,15 @@ export default function MedicinesScreen({
       {/* STEP 1: MODAL - SELECT FROM CATEGORIES (MATCHING ATTACHED SCREENSHOT) */}
       <Modal visible={showCategoryModal} animationType="slide" transparent={true} onRequestClose={() => setShowCategoryModal(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={[styles.categoryModalCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+          <View
+            style={[
+              styles.categoryModalCard,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+                paddingBottom: Math.max(insets.bottom + (isTablet ? 28 : 14), isTablet ? 48 : 28),
+              },
+            ]}
+          >
             {/* Modal Header */}
             <View style={styles.categoryHeaderRow}>
               <TouchableOpacity onPress={() => setShowCategoryModal(false)} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -1019,7 +1049,15 @@ export default function MedicinesScreen({
           </ScrollView>
 
           {/* BOTTOM BAR: TOTAL IN LAST & PROCEED / PAY NOW BUTTON */}
-          <View style={[styles.stickyCartBar, { backgroundColor: isDark ? '#0F172A' : '#0F253E' }]}>
+          <View
+            style={[
+              styles.stickyCartBar,
+              {
+                backgroundColor: isDark ? '#0F172A' : '#0F253E',
+                paddingBottom: Math.max(insets.bottom + (isTablet ? 18 : 8), isTablet ? 28 : 14),
+              },
+            ]}
+          >
             <View>
               <Text style={styles.cartCountText}>{cartTotalItemsCount} Item{cartTotalItemsCount !== 1 ? 's' : ''} Selected</Text>
               <Text style={styles.cartTotalText}>Total: ₹{cartTotalAmount}</Text>
@@ -1044,7 +1082,15 @@ export default function MedicinesScreen({
       {/* STEP 3: MODAL - PACKAGE PICKUP, ITEMIZED MEDICINES LIST WITH EDITABLE QUANTITIES */}
       <Modal visible={showConfirmModal} animationType="slide" transparent={true} onRequestClose={() => setShowConfirmModal(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={[styles.confirmModalCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+          <View
+            style={[
+              styles.confirmModalCard,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+                paddingBottom: Math.max(insets.bottom + (isTablet ? 28 : 14), isTablet ? 48 : 28),
+              },
+            ]}
+          >
             {/* Header */}
             <View style={styles.modalHeaderRow}>
               <Text style={[styles.confirmHeaderTitle, { color: isDark ? '#F1F5F9' : '#0F253E' }]}>Confirm Medicine Order</Text>
@@ -1147,7 +1193,15 @@ export default function MedicinesScreen({
       {/* STEP 4: PAYMENT OPTIONS SHEET MODAL (EXACT SAME AS BOOK TEST & PAY BILLS) */}
       <Modal visible={showPaymentModal} animationType="slide" transparent={true} onRequestClose={() => setShowPaymentModal(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={[styles.confirmModalCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+          <View
+            style={[
+              styles.confirmModalCard,
+              {
+                backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+                paddingBottom: Math.max(insets.bottom + (isTablet ? 28 : 14), isTablet ? 48 : 28),
+              },
+            ]}
+          >
             <View style={styles.modalHeaderRow}>
               <Text style={[styles.confirmHeaderTitle, { color: isDark ? '#F1F5F9' : '#0F253E' }]}>Select Payment Method</Text>
               <TouchableOpacity onPress={() => setShowPaymentModal(false)} activeOpacity={0.7}>

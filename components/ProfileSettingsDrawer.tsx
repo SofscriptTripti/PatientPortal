@@ -145,7 +145,13 @@ export const ProfileSettingsDrawer: React.FC<ProfileSettingsDrawerProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.slideBarScrollContent}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.slideBarScrollContent,
+              { paddingBottom: Math.max(insets.bottom + 40, isTablet ? 64 : 40) },
+            ]}
+          >
             {/* User Identity Banner with Profile Pic, Name, UHID, Mobile & Circular Dropdown Switcher Icon on Right */}
             <View style={[styles.slideUserBanner, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -461,7 +467,16 @@ export const ProfileSettingsDrawer: React.FC<ProfileSettingsDrawerProps> = ({
           </Modal>
 
           {/* Bottom Sticky Logout Button */}
-          <View style={[styles.slideStickyFooter, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <View
+            style={[
+              styles.slideStickyFooter,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+                paddingBottom: Math.max(insets.bottom + (isTablet ? 28 : 14), isTablet ? 40 : 20),
+              },
+            ]}
+          >
             <TouchableOpacity
               style={styles.slideLogoutBtn}
               activeOpacity={0.8}

@@ -647,7 +647,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
             {
               paddingHorizontal: isTablet ? 20 : 16,
               paddingTop: isTablet ? 16 : 14,
-              paddingBottom: 120, // ample room for right floating button above bottom bar
+              paddingBottom: insets.bottom + (isTablet ? 140 : 120), // ample room for right floating button above bottom bar
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -826,7 +826,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
         <TouchableOpacity
           style={[
             styles.floatingBookBtnRight,
-            { bottom: Math.max(insets.bottom, 10) + 72 },
+            { bottom: Math.max(insets.bottom + (isTablet ? 14 : 0), isTablet ? 22 : 10) + (isTablet ? 80 : 72) },
           ]}
           onPress={onBookNewVisit}
           activeOpacity={0.88}
@@ -841,7 +841,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
             {
               backgroundColor: colors.surface,
               borderColor: isDark ? colors.border : '#E2E8F0',
-              bottom: Math.max(insets.bottom, 10),
+              bottom: Math.max(insets.bottom + (isTablet ? 14 : 0), isTablet ? 22 : 10),
             },
           ]}
         >
@@ -941,7 +941,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                 {
                   backgroundColor: colors.surface,
                   borderColor: colors.border,
-                  paddingBottom: Math.max(insets.bottom + 20, 40),
+                  paddingBottom: Math.max(insets.bottom + (isTablet ? 30 : 20), isTablet ? 52 : 40),
                 },
               ]}
             >
@@ -1049,7 +1049,7 @@ export const VisitsScreen: React.FC<VisitsScreenProps> = ({
                 {
                   backgroundColor: colors.surface,
                   borderColor: colors.border,
-                  paddingBottom: Math.max(insets.bottom + 20, 40),
+                  paddingBottom: Math.max(insets.bottom + (isTablet ? 30 : 20), isTablet ? 52 : 40),
                 },
               ]}
             >

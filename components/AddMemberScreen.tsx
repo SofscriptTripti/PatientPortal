@@ -482,7 +482,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
               {
                 paddingHorizontal: isTablet ? 20 : 16,
                 paddingTop: isTablet ? 16 : 14,
-                paddingBottom: Math.max(insets.bottom + 80, 95) + keyboardExtraPadding,
+                paddingBottom: Math.max(insets.bottom + (isTablet ? 110 : 80), isTablet ? 125 : 95) + keyboardExtraPadding,
               },
             ]}
             showsVerticalScrollIndicator={false}
@@ -871,7 +871,7 @@ export const AddMemberScreen: React.FC<AddMemberScreenProps> = ({
             {
               backgroundColor: colors.surface,
               borderTopColor: colors.border,
-              paddingBottom: Math.max(insets.bottom, 14),
+              paddingBottom: Math.max(insets.bottom + (isTablet ? 20 : 0), isTablet ? 32 : 14),
             },
           ]}
         >

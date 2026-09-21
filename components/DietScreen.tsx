@@ -583,7 +583,13 @@ export const DietScreen: React.FC<DietScreenProps> = ({
 
         {/* FLOATING BOTTOM RIGHT ACTION BUTTON: "ORDER NOW" */}
         <TouchableOpacity
-          style={[styles.floatingBookTestBtn, { backgroundColor: colors.primary }]}
+          style={[
+            styles.floatingBookTestBtn,
+            {
+              backgroundColor: colors.primary,
+              bottom: Math.max(insets.bottom + (isTablet ? 24 : 12), isTablet ? 36 : 24),
+            },
+          ]}
           onPress={() => {
             setModalStep('menu');
             setShowOrderModal(true);
@@ -776,7 +782,15 @@ export const DietScreen: React.FC<DietScreenProps> = ({
                   </ScrollView>
 
                   {/* STEP 1 FOOTER: PROCEED TO PAYMENT */}
-                  <View style={[styles.modalFooter, { borderTopColor: isDark ? colors.border : '#F1F5F9' }]}>
+                  <View
+                    style={[
+                      styles.modalFooter,
+                      {
+                        borderTopColor: isDark ? colors.border : '#F1F5F9',
+                        paddingBottom: Math.max(insets.bottom + (isTablet ? 20 : 10), isTablet ? 32 : 16),
+                      },
+                    ]}
+                  >
                     <TouchableOpacity
                       style={[styles.submitRequestBtn, { backgroundColor: colors.primary }]}
                       onPress={handleProceedToPayment}
@@ -870,7 +884,15 @@ export const DietScreen: React.FC<DietScreenProps> = ({
                   </ScrollView>
 
                   {/* STEP 2 FOOTER: SUBMIT & PLACE ORDER */}
-                  <View style={[styles.modalFooter, { borderTopColor: isDark ? colors.border : '#F1F5F9' }]}>
+                  <View
+                    style={[
+                      styles.modalFooter,
+                      {
+                        borderTopColor: isDark ? colors.border : '#F1F5F9',
+                        paddingBottom: Math.max(insets.bottom + (isTablet ? 20 : 10), isTablet ? 32 : 16),
+                      },
+                    ]}
+                  >
                     <TouchableOpacity
                       style={[
                         styles.submitRequestBtn,

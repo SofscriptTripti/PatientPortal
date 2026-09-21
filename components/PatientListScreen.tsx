@@ -586,7 +586,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
             {
               paddingHorizontal: isTablet ? 20 : 12,
               paddingTop: isTablet ? 14 : 10,
-              paddingBottom: insets.bottom + (initialTab === 'IP' ? (isTablet ? 110 : 85) : (isTablet ? 70 : 60)),
+              paddingBottom: insets.bottom + (initialTab === 'IP' ? (isTablet ? 130 : 85) : (isTablet ? 85 : 60)),
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -652,7 +652,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
           <TouchableOpacity
             style={[
               styles.floatingAddMemberFab,
-              { bottom: Math.max(insets.bottom, 10) + (initialTab === 'IP' ? 82 : 16) },
+              { bottom: Math.max(insets.bottom + (isTablet ? 14 : 0), isTablet ? 22 : 10) + (initialTab === 'IP' ? (isTablet ? 90 : 82) : (isTablet ? 24 : 16)) },
             ]}
             onPress={() => {
               if (onOpenAddMember) onOpenAddMember();
@@ -675,7 +675,7 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
               {
                 backgroundColor: colors.surface,
                 borderColor: isDark ? colors.border : '#E2E8F0',
-                bottom: Math.max(insets.bottom, 10),
+                bottom: Math.max(insets.bottom + (isTablet ? 14 : 0), isTablet ? 22 : 10),
               },
             ]}
           >
@@ -920,7 +920,15 @@ export const PatientListScreen: React.FC<PatientListScreenProps> = ({
       >
         <View style={styles.sheetOverlay}>
           <TouchableOpacity style={styles.sheetBackdrop} onPress={() => setSelectedPatient(null)} activeOpacity={1} />
-          <View style={[styles.sheetCardContainer, { backgroundColor: colors.surface }]}>
+          <View
+            style={[
+              styles.sheetCardContainer,
+              {
+                backgroundColor: colors.surface,
+                paddingBottom: Math.max(insets.bottom + (isTablet ? 36 : 20), isTablet ? 54 : 32),
+              },
+            ]}
+          >
             {/* Top Handle Bar */}
             <View style={styles.sheetHandleBar} />
 

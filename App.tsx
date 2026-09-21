@@ -92,7 +92,7 @@ function AppContent() {
         'Are you sure you want to close the app?',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() },
+          { text: 'Exit', style: 'default', onPress: () => BackHandler.exitApp() },
         ]
       );
       return true;
@@ -122,8 +122,8 @@ function AppContent() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={!userSession.isLoggedIn ? 'dark-content' : (isDark ? 'light-content' : 'dark-content')} />
+      <View style={[styles.container, { backgroundColor: !userSession.isLoggedIn ? '#EDF5F8' : colors.background }]}>
         {userSession.isLoggedIn ? (
           currentScreen === 'dashboard' ? (
             <DashboardScreen

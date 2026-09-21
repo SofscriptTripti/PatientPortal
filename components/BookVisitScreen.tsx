@@ -602,7 +602,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
             {
               paddingHorizontal: isTablet ? 24 : 16,
               paddingTop: 12,
-              paddingBottom: insets.bottom + 40,
+              paddingBottom: insets.bottom + (isTablet ? 80 : 40),
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -1851,6 +1851,7 @@ export const BookVisitScreen: React.FC<BookVisitScreenProps> = ({
                     backgroundColor: colors.surface,
                     borderColor: colors.border,
                     borderTopWidth: 1,
+                    paddingBottom: Math.max(insets.bottom + (isTablet ? 28 : 14), isTablet ? 48 : 28),
                   },
                 ]}
               >

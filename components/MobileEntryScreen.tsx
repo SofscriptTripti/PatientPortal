@@ -9,13 +9,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppIcon from './Icons';
 import IMAGES from './imageAssets';
-import { useTheme } from './ThemeContext';
+import { lightColors } from './ThemeContext';
 
 interface MobileEntryScreenProps {
   mobileNumber: string;
@@ -34,7 +33,9 @@ export const MobileEntryScreen: React.FC<MobileEntryScreenProps> = ({
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 600 || height >= 950;
   const isSmallMobile = width < 380;
-  const { isDark, colors } = useTheme();
+  // Login page always uses default theme colors
+  const isDark = false;
+  const colors = lightColors;
   
   // Responsive sizing for hero image and typography
   const heroImgWidth = isTablet ? 380 : (isSmallMobile ? 140 : 155);

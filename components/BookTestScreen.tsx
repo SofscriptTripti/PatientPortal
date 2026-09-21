@@ -518,7 +518,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const isTablet = width >= 768;
+  const isTablet = width >= 600 || height >= 950;
 
   const [activeTab, setActiveTab] = useState<'doctor_prescription' | 'self_prescription'>(
     'doctor_prescription'
@@ -1190,6 +1190,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                   {
                     backgroundColor: colors.surface,
                     borderTopColor: isDark ? colors.border : '#E2E8F0',
+                    paddingBottom: Math.max(insets.bottom + (isTablet ? 18 : 8), isTablet ? 28 : 14),
                   },
                 ]}
               >
@@ -1218,7 +1219,13 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
             <TouchableOpacity
               style={[
                 styles.floatingBookBtnRight,
-                { bottom: Math.max(insets.bottom, 10) + (selectedTests.length > 0 && prescriptionSubStep === 'prescribed_tests_booking' ? 76 : 24) },
+                {
+                  bottom:
+                    Math.max(insets.bottom, isTablet ? 20 : 10) +
+                    (selectedTests.length > 0 && prescriptionSubStep === 'prescribed_tests_booking'
+                      ? (isTablet ? 92 : 76)
+                      : (isTablet ? 36 : 24)),
+                },
               ]}
               onPress={() => setShowBookCustomModal(true)}
               activeOpacity={0.88}
@@ -1232,7 +1239,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
         {/* STEP 2: SELECT LAB VISIT SLOTS (HOSPITAL WALK-IN ONLY) */}
         {bookingStep === 'slots' && (
           <ScrollView
-            contentContainerStyle={[styles.scrollListContent, { paddingBottom: 40 }]}
+            contentContainerStyle={[styles.scrollListContent, { paddingBottom: Math.max(insets.bottom + (isTablet ? 60 : 30), isTablet ? 70 : 40) }]}
             showsVerticalScrollIndicator={false}
           >
             <View style={[styles.cardContainer, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : '#E2E8F0' }]}>
@@ -1312,7 +1319,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
         {/* STEP 3: INVOICE & BILL SUMMARY */}
         {bookingStep === 'bill_summary' && (
           <ScrollView
-            contentContainerStyle={[styles.scrollListContent, { paddingBottom: 40 }]}
+            contentContainerStyle={[styles.scrollListContent, { paddingBottom: Math.max(insets.bottom + (isTablet ? 60 : 30), isTablet ? 70 : 40) }]}
             showsVerticalScrollIndicator={false}
           >
             <View
@@ -1875,6 +1882,7 @@ export const BookTestScreen: React.FC<BookTestScreenProps> = ({
                     {
                       backgroundColor: colors.surface,
                       borderTopColor: isDark ? colors.border : '#E2E8F0',
+                      paddingBottom: Math.max(insets.bottom + (isTablet ? 18 : 8), isTablet ? 28 : 14),
                     },
                   ]}
                 >

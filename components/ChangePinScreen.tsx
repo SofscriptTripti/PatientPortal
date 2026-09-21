@@ -173,7 +173,7 @@ export const ChangePinScreen: React.FC<ChangePinScreenProps> = ({
               {
                 paddingHorizontal: isTablet ? 24 : 16,
                 paddingTop: isTablet ? 20 : 16,
-                paddingBottom: insets.bottom + 40,
+                paddingBottom: insets.bottom + (isTablet ? 70 : 40),
               },
             ]}
             showsVerticalScrollIndicator={false}
